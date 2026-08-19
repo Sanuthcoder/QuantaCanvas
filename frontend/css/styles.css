@@ -1071,7 +1071,7 @@ body.tool-page .site-footer {
 }
 
 /* Tool workspace (from tool.py /responses) */
-.tool-responses-view {
+.s-view {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
@@ -1082,11 +1082,11 @@ body.tool-page .site-footer {
   padding: 0;
 }
 
-.tool-responses-view[hidden] {
+.s-view[hidden] {
   display: none !important;
 }
 
-.tool-response-page {
+.-page {
   width: 100vw;
   height: auto;
   min-height: 100dvh;
@@ -1100,20 +1100,20 @@ body.tool-page .site-footer {
   overflow-y: auto;
 }
 
-.tool-response-page .site-header,
-.tool-response-page .site-footer {
+.-page .site-header,
+.-page .site-footer {
   display: block;
   flex: 0 0 auto;
 }
 
-.tool-response-page .site-header {
+.-page .site-header {
   position: static;
 }
 
 .tool-response-content {
   width: 100%;
   flex: 0 0 auto;
-  min-height: calc(100dvh - 175px);
+  height: calc(100dvh - 175px);   /* was: min-height */
   overflow-x: auto;
   overflow-y: visible;
 }
@@ -1124,7 +1124,7 @@ body.tool-page .site-footer {
   flex-wrap: nowrap;
   width: 100%;
   min-width: 860px;
-  height: 100dvh;
+  height: 100%;      
   min-height: 720px;
   overflow: visible;
   align-items: stretch;
