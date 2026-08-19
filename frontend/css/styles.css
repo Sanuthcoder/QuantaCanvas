@@ -1113,7 +1113,7 @@ body.tool-page .site-footer {
 .tool-response-content {
   width: 100%;
   flex: 0 0 auto;
-  height: calc(100dvh - 175px);   /* was: min-height */
+  height: calc(100dvh - 175px);
   overflow-x: auto;
   overflow-y: visible;
 }
