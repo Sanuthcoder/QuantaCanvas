@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Example Generations — QuantaCanvas Gallery</title>
+<meta name="description" content="Browse example QuantaCanvas generations across math, physics and computer science — each one an interactive scene built from a single prompt." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="QuantaCanvas Example Generations" />
+<meta property="og:description" content="A gallery of interactive visualizations generated from plain-language prompts." />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Asimovian&display=swap" rel="stylesheet" />
+<script>if (localStorage.getItem("qc-theme") === "light") document.documentElement.classList.add("light");</script>
+
+</head>
+<body>
+<header class="site-header">
+  <nav class="nav">
+    <a class="brand" href="index.html">
+      <span class="brand-mark"><img src="assets/logo.png" alt="QuantaCanvas"></span>
+      <span class="brand-word" style="font-family: 'Asimovian', sans-serif; font-size: 24px; font-weight: 700;">Quanta<span class="c">Canvas</span></span>
+    </a>
+    <div class="nav-menu" id="navMenu">
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="examples.html">Examples</a></li>
+      </ul>
+      <button class="more-btn" id="moreBtn" aria-label="More menu" aria-expanded="false" type="button">⋯</button>
+      <ul class="more-menu" id="moreMenu"></ul>
+    </div>
+    <div class="nav-right">
+      <button class="icon-btn" data-theme-toggle type="button">☀</button>
+      <a class="btn" href="tool.html">Try it</a>
+    </div>
+  </nav>
+</header>
+
+<main class="wrap" style="padding-top:80px;padding-bottom:80px;">
+  <p class="mono accent" style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;">Gallery</p>
+  <h1 style="margin-top:16px;font-size:clamp(32px,5vw,48px);font-weight:600;">Example generations</h1>
+  <p class="muted" style="margin-top:16px;max-width:620px;">Placeholder gallery — each card will link to a live, interactive generation.</p>
+
+  <!-- <div class="filters">
+    <button class="filter active" data-filter="All" type="button">All</button>
+    <button class="filter" data-filter="Math" type="button">Math</button>
+    <button class="filter" data-filter="Physics" type="button">Physics</button>
+    <button class="filter" data-filter="Computer Science" type="button">Computer Science</button>
+  </div> -->
+
+  <div class="grid3" style="margin-top:40px;">
+    <a href="examples/vor.html"><article class="panel thumb" data-tag="Math"><div class="preview grid-field" style="height:160px;"><div class="glow-bar"></div><span class="tag mono" style="left:auto;right:12px;">01</span></div><div class="body"><span class="mono accent" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">Math</span><h3 style="margin-top:6px;">Volume of Revolution</h3></div></article></a>
+    <a href="examples/maclaurin.html"><article class="panel thumb" data-tag="Math"><div class="preview grid-field" style="height:160px;"><div class="glow-bar"></div><span class="tag mono" style="left:auto;right:12px;">02</span></div><div class="body"><span class="mono accent" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">Math</span><h3 style="margin-top:6px;">Maclaurin's Series</h3></div></article></a>
+    <a href="examples/lechatelier.html"><article class="panel thumb" data-tag="Chemistry"><div class="preview grid-field" style="height:160px;"><div class="glow-bar"></div><span class="tag mono" style="left:auto;right:12px;">03</span></div><div class="body"><span class="mono accent" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">Chemistry</span><h3 style="margin-top:6px;">Le Chatelier's Principle</h3></div></article></a>
+    <a href="examples/differentiation.html"><article class="panel thumb" data-tag="Math"><div class="preview grid-field" style="height:160px;"><div class="glow-bar"></div><span class="tag mono" style="left:auto;right:12px;">04</span></div><div class="body"><span class="mono accent" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">Math</span><h3 style="margin-top:6px;">Differentiation</h3></div></article></a>
+    <a href="examples/eminduction.html"><article class="panel thumb" data-tag="Physics"><div class="preview grid-field" style="height:160px;"><div class="glow-bar"></div><span class="tag mono" style="left:auto;right:12px;">05</span></div><div class="body"><span class="mono accent" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">Physics</span><h3 style="margin-top:6px;">Electromagnetic Induction</h3></div></article></a>
+    <a href="examples/photosynthesis.html"><article class="panel thumb" data-tag="Biology"><div class="preview grid-field" style="height:160px;"><div class="glow-bar"></div><span class="tag mono" style="left:auto;right:12px;">06</span></div><div class="body"><span class="mono accent" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">Biology</span><h3 style="margin-top:6px;">Limiting Factors of Photosynthesis</h3></div></article></a>
+    <a href="examples/insertionsort.html"><article class="panel thumb" data-tag="Computer Science"><div class="preview grid-field" style="height:160px;"><div class="glow-bar"></div><span class="tag mono" style="left:auto;right:12px;">07</span></div><div class="body"><span class="mono accent" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">Computer Science</span><h3 style="margin-top:6px;">Insertion Sort</h3></div></article></a>
+    <a href="examples/osmosis.html"><article class="panel thumb" data-tag="Biology"><div class="preview grid-field" style="height:160px;"><div class="glow-bar"></div><span class="tag mono" style="left:auto;right:12px;">08</span></div><div class="body"><span class="mono accent" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">Biology</span><h3 style="margin-top:6px;">Osmosis</h3></div></article></a>
+    <a href="examples/dcmotor.html"><article class="panel thumb" data-tag="Physics"><div class="preview grid-field" style="height:160px;"><div class="glow-bar"></div><span class="tag mono" style="left:auto;right:12px;">09</span></div><div class="body"><span class="mono accent" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;">Physics</span><h3 style="margin-top:6px;">DC Motor</h3></div></article></a>
+  </div>
+</main>
+
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p>QuantaCanvas — visualize the concepts that text can't explain.</p>
+    <div class="footer-links">
+      <a href="about.html">About</a>
+      <a href="examples.html">Examples</a>
+      <a href="tool.html">Tool</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+
+</body>
+</html>

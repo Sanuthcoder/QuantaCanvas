@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Electromagnetic Induction & Lenz's Law</title>
+  
+  <!-- Tailwind CSS (for layout utilities) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- GSAP for robust animations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  
+  <!-- p5.js for high-performance physics simulation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  
+  <!-- KaTeX for beautiful math equations -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --panel: #313244;
+      --text: #cdd6f4;
+      --muted: #6c7086;
+      --grid: #45475a;
+      --axis: #bac2de;
+      --accent1: #89b4fa; /* Blue (South Pole / Magnetic Field) */
+      --accent2: #f5c2e7; /* Pink (North Pole / Lenz Opposition) */
+      --accent3: #a6e3a1; /* Green (Induced Current / Galvanometer) */
+      --hover: #f9e2af;   /* Yellow (Highlights) */
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    /* Split layout */
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .header {
+      flex: 0 0 auto;
+      background-color: var(--panel);
+      border-bottom: 1px solid var(--grid);
+      padding: 0.75rem 1.5rem;
+    }
+
+    .stage {
+      flex: 1 1 0;
+      display: grid;
+      grid-template-columns: var(--visual-w, 55%) 6px minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+      height: 100%;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .visual-pane {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background-color: #11111b;
+    }
+
+    .visual-host {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Resizable Divider */
+    .divider {
+      grid-column: 2;
+      height: 100%;
+      background-color: var(--grid);
+      cursor: col-resize;
+      transition: background-color 0.2s;
+      position: relative;
+      z-index: 10;
+    }
+
+    .divider:hover, .divider.dragging {
+      background-color: var(--hover);
+    }
+
+    .divider::after {
+      content: '';
+      position: absolute;
+      left: 2px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2px;
+      height: 40px;
+      background-color: var(--axis);
+      border-radius: 1px;
+    }
+
+    .content-pane {
+      grid-column: 3;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg);
+      border-left: 1px solid var(--grid);
+    }
+
+    /* Steps and Transitions */
+    .step-container {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2rem;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .eq-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 1rem 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent1) transparent;
+      margin: 1.5rem 0;
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+      border: 1px solid var(--grid);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 120px;
+    }
+
+    .eq-state {
+      display: inline-block;
+      white-space: nowrap;
+      min-width: max-content;
+      font-size: clamp(1.2rem, 2.5vw, 2.2rem);
+      padding: 0 1rem;
+      transition: opacity 0.3s ease;
+    }
+
+    /* Custom scrollbar for equation wrapper */
+    .eq-wrap::-webkit-scrollbar {
+      height: 6px;
+    }
+    .eq-wrap::-webkit-scrollbar-thumb {
+      background: var(--accent1);
+      border-radius: 3px;
+    }
+
+    .footer {
+      flex: 0 0 auto;
+      background-color: var(--panel);
+      border-top: 1px solid var(--grid);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Buttons & Controls */
+    .btn {
+      background-color: var(--grid);
+      color: var(--text);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn:hover:not(:disabled) {
+      background-color: var(--hover);
+      color: var(--bg);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background-color: var(--accent1);
+      color: var(--bg);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--hover);
+    }
+
+    .control-panel {
+      background: rgba(49, 50, 68, 0.5);
+      border: 1px solid var(--grid);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+
+    /* Highlight classes for equations */
+    .highlight-new { color: var(--hover) !important; font-weight: bold; }
+    .highlight-cancel { color: var(--accent2) !important; text-decoration: line-through; opacity: 0.6; }
+    .highlight-final { color: var(--accent3) !important; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">⚡</span>
+        <h1 class="text-xl font-bold tracking-tight">Electromagnetic Induction &amp; Lenz's Law</h1>
+      </div>
+      <div class="text-xs text-[var(--muted)] border border-[var(--grid)] px-2 py-1 rounded">
+        Shift + 🡐 🡒 to switch steps
+      </div>
+    </header>
+
+    <!-- Main Workspace Stage -->
+    <main class="stage" id="stage">
+      <!-- Left: Interactive Simulation Pane -->
+      <div class="visual-pane">
+        <div id="p5-host" class="visual-host"></div>
+      </div>
+
+      <!-- Resizable Split Divider -->
+      <div class="divider" id="divider" role="separator" aria-orientation="vertical"></div>
+
+      <!-- Right: Narrative & Math Pane -->
+      <div class="content-pane">
+        <div class="step-container" id="step-content">
+          <!-- Dynamic Content Injected Here -->
+        </div>
+
+        <!-- Local Step / Equation Navigation Footer -->
+        <footer class="footer">
+          <div class="flex gap-2">
+            <button id="prev-btn" class="btn">🡐 Prev Step</button>
+            <button id="next-btn" class="btn btn-primary">Next Step 🡒</button>
+          </div>
+          <div class="text-sm font-medium" id="step-indicator">
+            Step 1 / 4
+          </div>
+        </footer>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // --- Configuration & Themes ---
+    const THEME = {
+      bg: '#1e1e2e',
+      panel: '#313244',
+      text: '#cdd6f4',
+      muted: '#6c7086',
+      grid: '#45475a',
+      axis: '#bac2de',
+      accent1: '#89b4fa', // Blue (South pole, regular field)
+      accent2: '#f5c2e7', // Pink (North pole, induced field opposition)
+      accent3: '#a6e3a1', // Green (Induced current, positive results)
+      hover: '#f9e2af'    // Yellow (highlights/electrons)
+    };
+
+    // --- State Management ---
+    let currentStepIndex = 0;
+    let currentEqStateIndex = 0;
+
+    // Simulation parameters shared with p5
+    const simState = {
+      magnetX: 150,
+      magnetTargetX: 150,
+      isDragging: false,
+      magnetVelocity: 0,
+      coilTurns: 3,
+      coilRadius: 50,
+      fluxHistory: [],
+      emfHistory: [],
+      inducedCurrent: 0,
+      directionOfChange: 0, // 1 for increasing, -1 for decreasing
+      autoPilot: true,
+      autoPilotMode: 'oscillate', // oscillate, pulse, static
+      showFieldLines: true,
+      showLenzOpp: false,
+    };
+
+    // --- Step Definitions ---
+    const STEPS = [
+      {
+        title: "1. Magnetic Flux ($\\Phi_B$)",
+        desc: "To understand induction, we must first measure the <strong>magnetic flux</strong> ($\\Phi_B$) passing through a loop area. Think of flux as the total number of magnetic field lines passing directly through the center of the coil.",
+        equationStates: [
+          {
+            latex: "\\Phi_B = \\vec{B} \\cdot \\vec{A}",
+            note: "Flux is the dot product of the magnetic field vector $\\vec{B}$ and the loop area vector $\\vec{A}$."
+          },
+          {
+            latex: "\\Phi_B = B A \\cos(\\theta)",
+            note: "When the field lines are perpendicular to the loop ($\\theta = 0$), flux is maximized: $\\Phi_B = B A$."
+          }
+        ],
+        onActivate: () => {
+          simState.autoPilot = true;
+          simState.autoPilotMode = 'static';
+          simState.showFieldLines = true;
+          simState.showLenzOpp = false;
+          gsap.to(simState, { magnetTargetX: 220, duration: 2, ease: "power1.inOut" });
+        }
+      },
+      {
+        title: "2. Faraday's Law of Induction",
+        desc: "Michael Faraday discovered that a <strong>changing</strong> magnetic flux induces an Electromotive Force (EMF, or voltage) in nearby conductors. Standing still produces zero current; motion is mandatory.",
+        equationStates: [
+          {
+            latex: "\\mathcal{E} = \\frac{d\\Phi_B}{dt}",
+            note: "The induced Electromotive Force ($\\mathcal{E}$) is proportional to the rate of change of magnetic flux."
+          },
+          {
+            latex: "\\mathcal{E} = N \\frac{d\\Phi_B}{dt}",
+            note: "Adding more turns ($N$) in the coil multiplies the total induced voltage."
+          }
+        ],
+        onActivate: () => {
+          simState.autoPilot = true;
+          simState.autoPilotMode = 'oscillate';
+          simState.showFieldLines = true;
+          simState.showLenzOpp = false;
+        }
+      },
+      {
+        title: "3. Lenz's Law & Conservation of Energy",
+        desc: "Lenz's Law explains the negative sign in the induction equation. The induced current creates a secondary magnetic field ($B_{\\text{induced}}$) that actively <strong>opposes</strong> the change in the original flux.",
+        equationStates: [
+          {
+            latex: "\\mathcal{E} = \\textcolor{#f5c2e7}{-} N \\frac{d\\Phi_B}{dt}",
+            note: "The negative sign guarantees that nature opposes change, maintaining conservation of energy."
+          },
+          {
+            latex: "\\Delta \\Phi_B > 0 \\implies B_{\\text{ind}} \\text{ opposes } B_{\\text{ext}}",
+            note: "As the magnet approaches, the loop generates a magnetic field in the opposite direction to push it away."
+          }
+        ],
+        onActivate: () => {
+          simState.autoPilot = true;
+          simState.autoPilotMode = 'pulse';
+          simState.showFieldLines = true;
+          simState.showLenzOpp = true;
+        }
+      },
+      {
+        title: "4. Interactive Sandbox",
+        desc: "Take full control. Click and drag the bar magnet with your mouse/touch. Watch how speed, direction, and loop turns instantly affect the induced EMF and current direction.",
+        equationStates: [
+          {
+            latex: "\\mathcal{E} = -N \\frac{d\\Phi_B}{dt}",
+            note: "Move the magnet fast to see large spikes. Notice how the current flips when moving in vs. out!"
+          }
+        ],
+        onActivate: () => {
+          simState.autoPilot = false;
+          simState.showFieldLines = true;
+          simState.showLenzOpp = true;
+        }
+      }
+    ];
+
+    // --- Resizable Split Divider Logic ---
+    const stage = document.getElementById('stage');
+    const divider = document.getElementById('divider');
+    let isDraggingDivider = false;
+
+    divider.addEventListener('pointerdown', (e) => {
+      isDraggingDivider = true;
+      divider.classList.add('dragging');
+      stage.setPointerCapture(e.pointerId);
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
+    });
+
+    stage.addEventListener('pointermove', (e) => {
+      if (!isDraggingDivider) return;
+      const rect = stage.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      const clampedPct = Math.max(30, Math.min(pct, 75));
+      stage.style.setProperty('--visual-w', `${clampedPct}%`);
+      
+      // Notify active step and p5 to resize
+      handleResize();
+    });
+
+    stage.addEventListener('pointerup', () => {
+      if (isDraggingDivider) {
+        isDraggingDivider = false;
+        divider.classList.remove('dragging');
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        handleResize();
+      }
+    });
+
+    window.addEventListener('resize', handleResize);
+
+    function handleResize() {
+      if (p5Instance) {
+        const host = document.getElementById('p5-host');
+        p5Instance.resizeCanvas(host.clientWidth, host.clientHeight);
+      }
+    }
+
+    // --- KaTeX Rendering Helpers ---
+    function safeRenderKatex(formula, element) {
+      const cleaned = formula
+        .replace(/^\s*\$\$?|\$\$?\s*$/g, '')
+        .replace(/^\s*\\[\(\[]|\\[\)\]]\s*$/g, '')
+        .trim();
+      const checkExist = setInterval(() => {
+        if (typeof window.katex !== 'undefined') {
+          clearInterval(checkExist);
+          try {
+            window.katex.render(cleaned, element, { throwOnError: false, displayMode: true });
+          } catch (err) { console.error(err); }
+        }
+      }, 50);
+    }
+
+    function safeAutoRender(rootElement) {
+      const tryRender = setInterval(() => {
+        if (typeof window.renderMathInElement !== 'undefined') {
+          clearInterval(tryRender);
+          window.renderMathInElement(rootElement, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$',  right: '$',  display: false},
+              {left: '\\(', right: '\\)', display: false},
+              {left: '\\[', right: '\\]', display: true}
+            ],
+            throwOnError: false,
+            ignoredTags: ['script','noscript','style','textarea','pre','code','option']
+          });
+        }
+      }, 50);
+    }
+
+    // --- Render Active Step Content ---
+    function renderStep() {
+      const step = STEPS[currentStepIndex];
+      const container = document.getElementById('step-content');
+      
+      // Prepare equation controls if step has multiple equations
+      const hasMultipleEqs = step.equationStates.length > 1;
+      
+      let html = `
+        <div class="space-y-4">
+          <h2 class="text-2xl font-bold tracking-tight text-[var(--accent1)]">${step.title}</h2>
+          <p class="text-sm md:text-base leading-relaxed text-[var(--text)]">${step.desc}</p>
+        </div>
+
+        <div class="my-auto flex flex-col items-center">
+          <div class="eq-wrap">
+            <div id="katex-eq" class="eq-state"></div>
+          </div>
+          <div class="text-center text-xs md:text-sm text-[var(--muted)] px-4" id="eq-note">
+            <!-- Equation subtext note -->
+          </div>
+          
+          ${hasMultipleEqs ? `
+          <div class="flex items-center gap-4 mt-4">
+            <button id="prev-eq-btn" class="btn px-3 py-1 text-xs">◀ Prev Formula</button>
+            <span class="text-xs font-semibold text-[var(--muted)]" id="eq-indicator">1 / 2</span>
+            <button id="next-eq-btn" class="btn px-3 py-1 text-xs">Next Formula ▶</button>
+          </div>
+          ` : ''}
+        </div>
+      `;
+
+      // Custom widgets per step
+      if (currentStepIndex === 3) { // Sandbox controls
+        html += `
+          <div class="control-panel flex flex-col gap-3">
+            <div class="flex justify-between items-center text-xs">
+              <span>Coil turns (N):</span>
+              <div class="flex gap-2">
+                <button onclick="updateTurns(1)" class="btn px-2 py-0.5 text-xs">1 Turn</button>
+                <button onclick="updateTurns(3)" class="btn px-2 py-0.5 text-xs">3 Turns</button>
+                <button onclick="updateTurns(5)" class="btn px-2 py-0.5 text-xs">5 Turns</button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span>Lenz visualizer:</span>
+              <button onclick="toggleLenzVisuals()" class="btn px-2 py-0.5 text-xs" id="lenz-toggle">ON</button>
+            </div>
+          </div>
+        `;
+      } else {
+        html += `<div class="h-10"></div>`; // spacer
+      }
+
+      container.innerHTML = html;
+
+      // Update equations
+      currentEqStateIndex = 0;
+      updateEquationState();
+
+      // Update Global navigation buttons
+      document.getElementById('prev-btn').disabled = currentStepIndex === 0;
+      document.getElementById('next-btn').innerHTML = currentStepIndex === STEPS.length - 1 ? 'Finish' : 'Next Step 🡒';
+      document.getElementById('step-indicator').textContent = `Step ${currentStepIndex + 1} / ${STEPS.length}`;
+
+      // Call activation callback for simulation setup
+      step.onActivate();
+
+      // Setup inner equation controllers if available
+      if (hasMultipleEqs) {
+        document.getElementById('prev-eq-btn').addEventListener('click', () => {
+          if (currentEqStateIndex > 0) {
+            currentEqStateIndex--;
+            updateEquationState();
+          }
+        });
+        document.getElementById('next-eq-btn').addEventListener('click', () => {
+          if (currentEqStateIndex < step.equationStates.length - 1) {
+            currentEqStateIndex++;
+            updateEquationState();
+          }
+        });
+      }
+
+      // Auto-render KaTeX inside structural text (descriptions, headers)
+      safeAutoRender(container);
+    }
+
+    function updateEquationState() {
+      const step = STEPS[currentStepIndex];
+      const state = step.equationStates[currentEqStateIndex];
+      
+      const eqEl = document.getElementById('katex-eq');
+      const noteEl = document.getElementById('eq-note');
+      
+      gsap.fromTo(eqEl, { opacity: 0, scale: 0.95 }, { opacity: 1, scale: 1, duration: 0.3 });
+      safeRenderKatex(state.latex, eqEl);
+      noteEl.innerHTML = state.note;
+      safeAutoRender(noteEl);
+
+      // Update equation navigation indicators if present
+      const ind = document.getElementById('eq-indicator');
+      if (ind) {
+        ind.textContent = `${currentEqStateIndex + 1} / ${step.equationStates.length}`;
+        document.getElementById('prev-eq-btn').disabled = currentEqStateIndex === 0;
+        document.getElementById('next-eq-btn').disabled = currentEqStateIndex === step.equationStates.length - 1;
+      }
+    }
+
+    // Sandbox helper functions
+    window.updateTurns = function(turns) {
+      simState.coilTurns = turns;
+    };
+    window.toggleLenzVisuals = function() {
+      simState.showLenzOpp = !simState.showLenzOpp;
+      const btn = document.getElementById('lenz-toggle');
+      if (btn) btn.textContent = simState.showLenzOpp ? 'ON' : 'OFF';
+    };
+
+    // Global step navigation
+    document.getElementById('prev-btn').addEventListener('click', () => {
+      if (currentStepIndex > 0) {
+        currentStepIndex--;
+        renderStep();
+      }
+    });
+
+    document.getElementById('next-btn').addEventListener('click', () => {
+      if (currentStepIndex < STEPS.length - 1) {
+        currentStepIndex++;
+        renderStep();
+      }
+    });
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.shiftKey) {
+        if (e.key === 'ArrowRight' && currentStepIndex < STEPS.length - 1) {
+          currentStepIndex++;
+          renderStep();
+        } else if (e.key === 'ArrowLeft' && currentStepIndex > 0) {
+          currentStepIndex--;
+          renderStep();
+        }
+      } else {
+        const step = STEPS[currentStepIndex];
+        if (e.key === 'ArrowRight' && currentEqStateIndex < step.equationStates.length - 1) {
+          currentEqStateIndex++;
+          updateEquationState();
+        } else if (e.key === 'ArrowLeft' && currentEqStateIndex > 0) {
+          currentEqStateIndex--;
+          updateEquationState();
+        }
+      }
+    });
+
+
+    // --- p5.js Induction Physics Engine ---
+    let p5Instance = new p5((sketch) => {
+      let canvasWidth = 100;
+      let canvasHeight = 100;
+      
+      // Physics Variables
+      let magnetWidth = 120;
+      let magnetHeight = 40;
+      let coilX;
+      let coilY;
+      let magneticConstant = 80000; 
+      let lastFlux = 0;
+      let fluxDeriv = 0;
+      let electronOffsets = [];
+
+      sketch.setup = () => {
+        const host = document.getElementById('p5-host');
+        canvasWidth = host.clientWidth;
+        canvasHeight = host.clientHeight;
+        const canvas = sketch.createCanvas(canvasWidth, canvasHeight);
+        canvas.parent('p5-host');
+        
+        coilX = canvasWidth / 2;
+        coilY = canvasHeight / 2 - 40;
+
+        // Initialize electron markers
+        for (let i = 0; i < 40; i++) {
+          electronOffsets.push(sketch.random(0, 1));
+        }
+      };
+
+      sketch.draw = () => {
+        sketch.background(17, 17, 27); // Catppuccin crust
+        
+        coilX = sketch.width / 2;
+        coilY = sketch.height / 2 - 20;
+
+        updatePhysics();
+        
+        // Render systems in 3D-like layer order
+        drawMagneticFieldLines(false); // Back field lines
+        drawCoilBack();                // Coil rear visual
+        drawMagnet();                  // Bar magnet
+        drawCoilFront();               // Coil front visual
+        drawMagneticFieldLines(true);  // Front field lines overlay
+        
+        if (simState.showLenzOpp) {
+          drawLenzOppositionField();
+        }
+
+        drawGalvanometer();
+        drawLightbulb();
+        drawValueGraphs();
+      };
+
+      sketch.windowResized = () => {
+        // Redundant safely covered by handleResize
+      };
+
+      function updatePhysics() {
+        // Handle AutoPilot movements
+        if (simState.autoPilot) {
+          if (simState.autoPilotMode === 'oscillate') {
+            simState.magnetTargetX = coilX + sketch.sin(sketch.frameCount * 0.05) * 180;
+          } else if (simState.autoPilotMode === 'pulse') {
+            // Smoothly move in, hold, move out
+            let period = sketch.frameCount % 240;
+            if (period < 60) {
+              simState.magnetTargetX = sketch.map(period, 0, 60, coilX + 220, coilX - 50);
+            } else if (period < 120) {
+              simState.magnetTargetX = coilX - 50;
+            } else if (period < 180) {
+              simState.magnetTargetX = sketch.map(period, 120, 180, coilX - 50, coilX + 220);
+            } else {
+              simState.magnetTargetX = coilX + 220;
+            }
+          } else if (simState.autoPilotMode === 'static') {
+            simState.magnetTargetX = coilX + 160;
+          }
+          
+          // Smooth interpolation
+          simState.magnetX += (simState.magnetTargetX - simState.magnetX) * 0.1;
+          simState.magnetVelocity = simState.magnetTargetX - simState.magnetX;
+        } else {
+          // Manual drag logic
+          if (simState.isDragging) {
+            let nextX = sketch.mouseX;
+            simState.magnetVelocity = nextX - simState.magnetX;
+            simState.magnetX = nextX;
+          } else {
+            simState.magnetVelocity *= 0.85; // drag deceleration
+          }
+        }
+
+        // Calculate live magnetic flux through coil
+        // Flux modeled from distance to dipole ends
+        let totalFlux = 0;
+        let solenoidTurnsWidth = 120;
+        
+        for (let i = 0; i < simState.coilTurns; i++) {
+          let turnOffset = sketch.map(i, 0, simState.coilTurns - 1, -solenoidTurnsWidth/2, solenoidTurnsWidth/2);
+          let turnX = coilX + turnOffset;
+          
+          // Flux is sum of B-field components parallel to coil axis
+          // B along axis for magnet N pole (+q_m at magnetX + halfWidth) and S pole (-q_m at magnetX - halfWidth)
+          let distN = turnX - (simState.magnetX + magnetWidth / 2);
+          let distS = turnX - (simState.magnetX - magnetWidth / 2);
+          
+          let BN = magneticConstant / sketch.pow(distN * distN + simState.coilRadius * simState.coilRadius, 1.5);
+          let BS = -magneticConstant / sketch.pow(distS * distS + simState.coilRadius * simState.coilRadius, 1.5);
+          
+          totalFlux += (BN + BS);
+        }
+
+        // Numerical derivative of Flux
+        fluxDeriv = (totalFlux - lastFlux);
+        lastFlux = totalFlux;
+
+        // EMF = -N * dFlux/dt
+        let rawEMF = -simState.coilTurns * fluxDeriv;
+        simState.inducedCurrent = sketch.constrain(rawEMF * 1.5, -15, 15);
+
+        // Store histories for graph visualization
+        simState.fluxHistory.push(totalFlux);
+        simState.emfHistory.push(rawEMF);
+        
+        if (simState.fluxHistory.length > 200) {
+          simState.fluxHistory.shift();
+          simState.emfHistory.shift();
+        }
+
+        simState.directionOfChange = fluxDeriv > 0.05 ? 1 : (fluxDeriv < -0.05 ? -1 : 0);
+      }
+
+      // --- Rendering Subroutines ---
+
+      function drawMagnet() {
+        sketch.push();
+        sketch.translate(simState.magnetX, coilY);
+
+        // Check hover / dragging
+        let isHover = sketch.mouseX > simState.magnetX - magnetWidth/2 && sketch.mouseX < simState.magnetX + magnetWidth/2 &&
+                     sketch.mouseY > coilY - magnetHeight/2 && sketch.mouseY < coilY + magnetHeight/2;
+                     
+        if (isHover && !simState.autoPilot) {
+          sketch.cursor('grab');
+        } else {
+          sketch.cursor();
+        }
+
+        // Magnet Body (South: Blue, North: Pink)
+        sketch.noStroke();
+        sketch.rectMode(sketch.CENTER);
+        
+        // South Pole
+        sketch.fill(THEME.accent1);
+        sketch.rect(-magnetWidth / 4, 0, magnetWidth / 2, magnetHeight, 4, 0, 0, 4);
+        
+        // North Pole
+        sketch.fill(THEME.accent2);
+        sketch.rect(magnetWidth / 4, 0, magnetWidth / 2, magnetHeight, 0, 4, 4, 0);
+
+        // Text Labels
+        sketch.fill(THEME.bg);
+        sketch.textSize(16);
+        sketch.textStyle(sketch.BOLD);
+        sketch.textAlign(sketch.CENTER, sketch.CENTER);
+        sketch.text("S", -magnetWidth / 4, 0);
+        sketch.text("N", magnetWidth / 4, 0);
+
+        sketch.pop();
+      }
+
+      function drawCoilBack() {
+        sketch.push();
+        sketch.strokeWeight(5);
+        sketch.stroke('#b07040'); // Dark copper color
+        sketch.noFill();
+
+        let solenoidWidth = 120;
+        for (let i = 0; i < simState.coilTurns; i++) {
+          let turnX = coilX + sketch.map(i, 0, simState.coilTurns - 1, -solenoidWidth/2, solenoidWidth/2);
+          // Draw back arc from HALF_PI to -HALF_PI (ellipse loop back)
+          sketch.arc(turnX, coilY, 40, simState.coilRadius * 2, sketch.HALF_PI, sketch.THREE_PI_2);
+        }
+        sketch.pop();
+      }
+
+      function drawCoilFront() {
+        sketch.push();
+        sketch.strokeWeight(6);
+        sketch.stroke('#e09050'); // Bright copper
+        sketch.noFill();
+
+        let solenoidWidth = 120;
+        for (let i = 0; i < simState.coilTurns; i++) {
+          let turnX = coilX + sketch.map(i, 0, simState.coilTurns - 1, -solenoidWidth/2, solenoidWidth/2);
+          // Draw front arc from -HALF_PI to HALF_PI
+          sketch.arc(turnX, coilY, 40, simState.coilRadius * 2, -sketch.HALF_PI, sketch.HALF_PI);
+
+          // Flowing Electrons inside coil
+          drawElectrons(turnX, i);
+        }
+        sketch.pop();
+      }
+
+      function drawElectrons(turnX, coilIndex) {
+        sketch.push();
+        sketch.fill(THEME.hover);
+        sketch.noStroke();
+        
+        let electronSpeed = simState.inducedCurrent * 0.05;
+        
+        for (let j = 0; j < 8; j++) {
+          let index = (coilIndex * 8 + j);
+          electronOffsets[index] += electronSpeed;
+          if (electronOffsets[index] < 0) electronOffsets[index] += 1;
+          if (electronOffsets[index] > 1) electronOffsets[index] -= 1;
+          
+          let val = electronOffsets[index];
+          // map to front arc (-HALF_PI to HALF_PI)
+          let angle = sketch.map(val, 0, 1, -sketch.HALF_PI, sketch.HALF_PI);
+          let y = coilY + sketch.sin(angle) * simState.coilRadius;
+          let x = turnX + sketch.cos(angle) * 20;
+
+          // Sparkle intensity based on current magnitude
+          let size = sketch.map(sketch.abs(simState.inducedCurrent), 0, 15, 2, 7);
+          sketch.ellipse(x, y, size, size);
+        }
+        sketch.pop();
+      }
+
+      function drawMagneticFieldLines(frontLayer) {
+        if (!simState.showFieldLines) return;
+        
+        sketch.push();
+        sketch.noFill();
+        sketch.strokeWeight(1.5);
+        
+        let alpha = sketch.map(sketch.constrain(sketch.dist(simState.magnetX, coilY, coilX, coilY), 0, 300), 0, 300, 255, 60);
+        
+        let linesCount = 8;
+        for (let i = 0; i < linesCount; i++) {
+          let angle = sketch.map(i, 0, linesCount - 1, -sketch.HALF_PI * 0.8, sketch.HALF_PI * 0.8);
+          
+          // Alternate back/front line rendering to maintain pseudo 3D depth
+          let isFrontLine = i < linesCount / 2;
+          if (isFrontLine !== frontLayer) continue;
+
+          sketch.stroke(137, 180, 250, alpha); // Themed blue magnetic fields
+
+          let startX = simState.magnetX + magnetWidth/2;
+          let startY = coilY + sketch.sin(angle) * 5;
+          let endX = simState.magnetX - magnetWidth/2;
+          let endY = coilY + sketch.sin(-angle) * 5;
+
+          // Generate loops
+          let cpYOffset = sketch.map(i, 0, linesCount - 1, -150, 150);
+          sketch.bezier(
+            startX, startY,
+            startX + 180, startY + cpYOffset,
+            endX - 180, endY + cpYOffset,
+            endX, endY
+          );
+        }
+        sketch.pop();
+      }
+
+      function drawLenzOppositionField() {
+        if (sketch.abs(simState.inducedCurrent) < 0.3) return;
+
+        sketch.push();
+        sketch.rectMode(sketch.CENTER);
+        
+        // Green / Pink arrow indicator for opposing flux
+        let extFieldDirection = 1; // From N pole pointing out
+        let oppositionDirection = -simState.directionOfChange * extFieldDirection;
+
+        if (oppositionDirection !== 0) {
+          sketch.stroke(THEME.accent2);
+          sketch.strokeWeight(3);
+          sketch.fill(THEME.bg);
+          
+          // Opposing field coils / arrows inside the solenoid
+          let arrowY = coilY - simState.coilRadius - 20;
+          let startX = coilX + (oppositionDirection * 80);
+          let endX = coilX - (oppositionDirection * 80);
+
+          sketch.line(startX, arrowY, endX, arrowY);
+          sketch.line(endX, arrowY, endX + oppositionDirection * 15, arrowY - 8);
+          sketch.line(endX, arrowY, endX + oppositionDirection * 15, arrowY + 8);
+          
+          sketch.noStroke();
+          sketch.fill(THEME.accent2);
+          sketch.textSize(13);
+          sketch.textAlign(sketch.CENTER, sketch.CENTER);
+          sketch.text("Induced Field B (Lenz's Law)", coilX, arrowY - 18);
+        }
+        sketch.pop();
+      }
+
+      function drawGalvanometer() {
+        let galvX = sketch.width * 0.25;
+        let galvY = sketch.height - 75;
+        let r = 50;
+
+        sketch.push();
+        sketch.translate(galvX, galvY);
+        
+        // Gauge Background
+        sketch.fill(THEME.panel);
+        sketch.stroke(THEME.grid);
+        sketch.strokeWeight(3);
+        sketch.ellipse(0, 0, r * 2, r * 2);
+
+        // Scale Ticks
+        sketch.stroke(THEME.muted);
+        sketch.strokeWeight(1.5);
+        for (let angle = -sketch.PI * 0.8; angle <= -sketch.PI * 0.2; angle += 0.15) {
+          let xS = sketch.cos(angle) * (r - 8);
+          let yS = sketch.sin(angle) * (r - 8);
+          let xE = sketch.cos(angle) * (r - 3);
+          let yE = sketch.sin(angle) * (r - 3);
+          sketch.line(xS, yS, xE, yE);
+        }
+
+        // Center indicator line
+        sketch.stroke(THEME.muted);
+        sketch.line(0, -r + 10, 0, -r + 3);
+
+        // Dynamic Needle Angle
+        let angle = sketch.map(simState.inducedCurrent, -15, 15, -sketch.PI * 0.75, -sketch.PI * 0.25);
+        sketch.stroke(THEME.accent3);
+        sketch.strokeWeight(3);
+        sketch.line(0, 0, sketch.cos(angle) * (r - 10), sketch.sin(angle) * (r - 10));
+        
+        // Center cap
+        sketch.fill(THEME.text);
+        sketch.noStroke();
+        sketch.ellipse(0, 0, 8, 8);
+
+        // Indicator Text
+        sketch.fill(THEME.text);
+        sketch.textSize(11);
+        sketch.textAlign(sketch.CENTER);
+        sketch.text("GALVANOMETER", 0, r - 8);
+        sketch.text("G", 0, -20);
+        sketch.pop();
+      }
+
+      function drawLightbulb() {
+        let bulbX = sketch.width * 0.75;
+        let bulbY = sketch.height - 75;
+
+        sketch.push();
+        sketch.translate(bulbX, bulbY);
+
+        // Calculate glow amount
+        let currentAbs = sketch.abs(simState.inducedCurrent);
+        let glowFactor = sketch.map(currentAbs, 0, 15, 0, 255);
+        
+        if (glowFactor > 5) {
+          sketch.noStroke();
+          sketch.fill(249, 226, 175, glowFactor * 0.3); // Yellow halo
+          sketch.ellipse(0, -10, 50, 50);
+          sketch.fill(249, 226, 175, glowFactor * 0.15);
+          sketch.ellipse(0, -10, 90, 90);
+        }
+
+        // Bulb glass structure
+        sketch.stroke(THEME.muted);
+        sketch.strokeWeight(2.5);
+        sketch.fill(glowFactor > 5 ? `rgba(249, 226, 175, ${sketch.map(glowFactor, 0, 255, 0.2, 0.9)})` : 'rgba(0,0,0,0)');
+        sketch.ellipse(0, -15, 30, 30);
+        sketch.rectMode(sketch.CENTER);
+        sketch.rect(0, -1, 14, 10, 2);
+
+        // Filament
+        sketch.stroke(glowFactor > 5 ? THEME.hover : THEME.muted);
+        sketch.strokeWeight(1.5);
+        sketch.line(-6, -10, -2, -18);
+        sketch.line(6, -10, 2, -18);
+        sketch.line(-2, -18, 2, -18);
+
+        sketch.fill(THEME.text);
+        sketch.noStroke();
+        sketch.textSize(11);
+        sketch.textAlign(sketch.CENTER);
+        sketch.text("LOAD (GLOW)", 0, 30);
+        sketch.pop();
+      }
+
+      function drawValueGraphs() {
+        // Overlay tiny historical graphs at top
+        let graphW = 120;
+        let graphH = 45;
+        let graphX = 30;
+        let graphY = 30;
+
+        // Flux graph
+        sketch.push();
+        sketch.translate(graphX, graphY);
+        sketch.noFill();
+        sketch.stroke(THEME.muted);
+        sketch.strokeWeight(1);
+        sketch.rect(0, 0, graphW, graphH, 4);
+        
+        sketch.fill(THEME.muted);
+        sketch.noStroke();
+        sketch.textSize(9);
+        sketch.text("Flux ɸ", 6, -6);
+
+        sketch.noFill();
+        sketch.stroke(THEME.accent1);
+        sketch.strokeWeight(1.5);
+        sketch.beginShape();
+        for (let i = 0; i < simState.fluxHistory.length; i++) {
+          let x = sketch.map(i, 0, simState.fluxHistory.length, 0, graphW);
+          let y = sketch.map(simState.fluxHistory[i], -120, 120, graphH, 0);
+          sketch.vertex(x, y);
+        }
+        sketch.endShape();
+        sketch.pop();
+
+        // EMF graph
+        sketch.push();
+        sketch.translate(sketch.width - graphW - 30, graphY);
+        sketch.noFill();
+        sketch.stroke(THEME.muted);
+        sketch.strokeWeight(1);
+        sketch.rect(0, 0, graphW, graphH, 4);
+
+        sketch.fill(THEME.muted);
+        sketch.noStroke();
+        sketch.textSize(9);
+        sketch.text("EMF Ɛ (Voltage)", 6, -6);
+
+        sketch.noFill();
+        sketch.stroke(THEME.accent2);
+        sketch.strokeWeight(1.5);
+        sketch.beginShape();
+        for (let i = 0; i < simState.emfHistory.length; i++) {
+          let x = sketch.map(i, 0, simState.emfHistory.length, 0, graphW);
+          let y = sketch.map(simState.emfHistory[i], -15, 15, graphH, 0);
+          sketch.vertex(x, y);
+        }
+        sketch.endShape();
+        sketch.pop();
+      }
+
+      // Drag listeners inside p5
+      sketch.mousePressed = () => {
+        if (simState.autoPilot) return;
+        let d = sketch.dist(sketch.mouseX, sketch.mouseY, simState.magnetX, coilY);
+        if (d < 80) {
+          simState.isDragging = true;
+        }
+      };
+
+      sketch.mouseReleased = () => {
+        simState.isDragging = false;
+      };
+    });
+
+    // --- On-load Initialization ---
+    window.addEventListener('DOMContentLoaded', () => {
+      renderStep();
+      handleResize();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kinetics & Le Chatelier's Principle Visualized</title>
+  
+  <!-- GSAP for animations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  
+  <!-- p5.js for beautiful interactive particle simulations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  
+  <!-- KaTeX for high-performance math rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --panel: #313244;
+      --text: #cdd6f4;
+      --muted: #6c7086;
+      --grid: #45475a;
+      --axis: #bac2de;
+      --accent1: #89b4fa; /* blue */
+      --accent2: #f5c2e7; /* pink */
+      --accent3: #a6e3a1; /* green */
+      --hover: #f9e2af;  /* yellow */
+      --visual-w: 55%;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+    }
+
+    /* Core Layout */
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      flex: 0 0 auto;
+      background-color: var(--panel);
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid var(--grid);
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.3rem;
+      color: var(--accent1);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    header .subtitle {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+
+    .stage {
+      flex: 1 1 0;
+      min-height: 0;
+      min-width: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Steps */
+    .step-container {
+      display: none;
+      width: 100%;
+      height: 100%;
+      grid-template-rows: minmax(0, 1fr);
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .step-container.active {
+      display: grid;
+    }
+
+    .step-container[data-layout="split"] {
+      grid-template-columns: var(--visual-w, 55%) 6px minmax(0, 1fr);
+    }
+
+    /* Panes */
+    .visual-pane {
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+      background-color: #11111b;
+    }
+
+    .visual-host {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .divider {
+      cursor: col-resize;
+      background-color: var(--grid);
+      position: relative;
+      transition: background-color 0.2s;
+    }
+
+    .divider:hover, .step-container.dragging .divider {
+      background-color: var(--accent1);
+    }
+
+    .divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 30px;
+      background-color: var(--text);
+      opacity: 0.4;
+    }
+
+    .explanation-pane {
+      min-width: 0;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg);
+      border-left: 1px solid var(--grid);
+    }
+
+    .explanation-pane h2 {
+      margin-top: 0;
+      margin-bottom: 0.4rem;
+      font-size: 1.25rem;
+      color: var(--accent1);
+    }
+
+    .explanation-pane .description {
+      color: var(--text);
+      font-size: 0.85rem;
+      line-height: 1.4;
+      margin-bottom: 1rem;
+    }
+
+    /* Equations */
+    .eq-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0.75rem;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent1) transparent;
+      background-color: var(--panel);
+      border-radius: 8px;
+      border: 1px solid var(--grid);
+      margin-bottom: 0.75rem;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .eq-wrap::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    .eq-wrap::-webkit-scrollbar-thumb {
+      background: var(--accent1);
+      border-radius: 2px;
+    }
+
+    .eq-state {
+      display: none;
+      white-space: nowrap;
+      min-width: max-content;
+      font-size: clamp(0.9rem, 1.8vw, 1.3rem);
+    }
+
+    /* Equation Step Controls */
+    .eq-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .eq-btn {
+      background-color: var(--panel);
+      border: 1px solid var(--grid);
+      color: var(--text);
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.2s;
+    }
+
+    .eq-btn:hover:not(:disabled) {
+      background-color: var(--accent1);
+      color: var(--bg);
+    }
+
+    .eq-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .eq-indicator {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: bold;
+    }
+
+    /* Simulation Parameter Controls */
+    .controls-card {
+      background-color: var(--panel);
+      border: 1px solid var(--grid);
+      border-radius: 8px;
+      padding: 0.85rem;
+      margin-top: auto;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    .controls-card h3 {
+      margin: 0 0 0.6rem 0;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+    }
+
+    .control-row {
+      margin-bottom: 0.6rem;
+    }
+
+    .control-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-row label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+
+    .control-row label span {
+      color: var(--accent1);
+      font-weight: bold;
+    }
+
+    .control-row input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent1);
+      cursor: pointer;
+    }
+
+    /* Global Navigation Footer */
+    footer {
+      flex: 0 0 auto;
+      background-color: var(--panel);
+      border-top: 1px solid var(--grid);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.2);
+    }
+
+    .nav-btn {
+      background-color: var(--accent1);
+      color: var(--bg);
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .nav-btn:hover {
+      opacity: 0.9;
+    }
+
+    .nav-btn:active {
+      transform: scale(0.97);
+    }
+
+    .nav-btn:disabled {
+      background-color: var(--muted);
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+
+    .step-dots {
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--grid);
+      transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .dot.active {
+      background-color: var(--accent1);
+      transform: scale(1.2);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <header>
+      <h1>Le Chatelier's Principle & Reaction Kinetics</h1>
+      <div class="subtitle">A visual translation from molecular collision dynamics to equilibrium shifts</div>
+    </header>
+    
+    <main class="stage">
+      
+      <!-- STEP 1: COLLISION THEORY -->
+      <div class="step-container" id="step-1" data-layout="split">
+        <div class="visual-pane">
+          <div class="visual-host" id="visual-step1"></div>
+        </div>
+        <div class="divider" role="separator" aria-orientation="vertical"></div>
+        <div class="explanation-pane">
+          <h2>1. Collision Theory & Reaction Rate</h2>
+          <div class="description">
+            For molecules to react, they must collide with <strong>sufficient kinetic energy</strong> (Activation Energy, $E_a$) and <strong>correct geometric alignment</strong>. Adjust parameters below to see how physical factors directly shape collision kinetics.
+          </div>
+          
+          <div class="eq-wrap">
+            <div class="eq-state" data-formula="\text{Reaction Rate} \propto \text{Collision Frequency} \times \text{Energy Factor}"></div>
+            <div class="eq-state" data-formula="\text{Rate} = k[A]^a[B]^b \quad \text{where } k = A e^{-\frac{E_a}{RT}}"></div>
+            <div class="eq-state" data-formula="\textcolor{#a6e3a1}{T\uparrow \implies \text{Velocity}\uparrow \implies \text{Collisions over } E_a \uparrow}"></div>
+          </div>
+          
+          <div class="eq-controls">
+            <button class="eq-btn eq-prev-btn">◀ Prev Step</button>
+            <span class="eq-indicator">1 / 3</span>
+            <button class="eq-btn eq-next-btn">Next Step ▶</button>
+          </div>
+
+          <div class="controls-card">
+            <h3>Simulation Adjustments</h3>
+            <div class="control-row">
+              <label>Concentration: <span id="val-conc">Medium</span></label>
+              <input type="range" id="slider-conc" min="10" max="60" value="30">
+            </div>
+            <div class="control-row">
+              <label>Temperature (Velocity): <span id="val-temp">Medium</span></label>
+              <input type="range" id="slider-temp" min="1" max="10" value="5">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: CHEMICAL EQUILIBRIUM -->
+      <div class="step-container" id="step-2" data-layout="split">
+        <div class="visual-pane">
+          <div class="visual-host" id="visual-step2"></div>
+        </div>
+        <div class="divider" role="separator" aria-orientation="vertical"></div>
+        <div class="explanation-pane">
+          <h2>2. Reversible Reactions & Equilibrium</h2>
+          <div class="description">
+            When products can react back into reactants, a dynamic state occurs. At <strong>Dynamic Equilibrium</strong>, the rate of forward conversions equals the rate of reverse conversions, yielding constant concentrations.
+          </div>
+          
+          <div class="eq-wrap">
+            <div class="eq-state" data-formula="\text{Forward: } A \xrightarrow{k_f} B \quad \text{and} \quad \text{Reverse: } B \xrightarrow{k_r} A"></div>
+            <div class="eq-state" data-formula="\text{Equilibrium reached when } \text{Rate}_{\text{forward}} = \text{Rate}_{\text{reverse}}"></div>
+            <div class="eq-state" data-formula="\textcolor{#a6e3a1}{K_{eq} = \frac{[B]_{\text{eq}}}{[A]_{\text{eq}}} = \frac{k_f}{k_r}}"></div>
+          </div>
+          
+          <div class="eq-controls">
+            <button class="eq-btn eq-prev-btn">◀ Prev Step</button>
+            <span class="eq-indicator">1 / 3</span>
+            <button class="eq-btn eq-next-btn">Next Step ▶</button>
+          </div>
+
+          <div class="controls-card">
+            <h3>Reaction Energies</h3>
+            <div class="control-row">
+              <label>Forward Ea (Red to Blue): <span id="val-eaf">Medium</span></label>
+              <input type="range" id="slider-eaf" min="1" max="10" value="5">
+            </div>
+            <div class="control-row">
+              <label>Reverse Ea (Blue to Red): <span id="val-ear">Medium</span></label>
+              <input type="range" id="slider-ear" min="1" max="10" value="5">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: LE CHATELIER - TEMPERATURE -->
+      <div class="step-container" id="step-3" data-layout="split">
+        <div class="visual-pane">
+          <div class="visual-host" id="visual-step3"></div>
+        </div>
+        <div class="divider" role="separator" aria-orientation="vertical"></div>
+        <div class="explanation-pane">
+          <h2>3. Temperature shifts (Exothermic)</h2>
+          <div class="description">
+            According to <strong>Le Chatelier's Principle</strong>, a system counteracts external stress. In an exothermic reaction, Heat acts as a product. Heating increases collision rate with "heat energy sparks", pushing the system left.
+          </div>
+          
+          <div class="eq-wrap">
+            <div class="eq-state" data-formula="\text{Reactant (Red)} \rightleftharpoons \text{Product (Blue)} + \text{Heat Spark}"></div>
+            <div class="eq-state" data-formula="\textcolor{#f5c2e7}{\text{Add Heat (Hot) } \implies \text{Consumes Spark} \implies \text{Shifts Left } (\leftarrow)}"></div>
+            <div class="eq-state" data-formula="\textcolor{#89b4fa}{\text{Cool down (Cold) } \implies \text{Releases Spark} \implies \text{Shifts Right } (\rightarrow)}"></div>
+          </div>
+          
+          <div class="eq-controls">
+            <button class="eq-btn eq-prev-btn">◀ Prev Step</button>
+            <span class="eq-indicator">1 / 3</span>
+            <button class="eq-btn eq-next-btn">Next Step ▶</button>
+          </div>
+
+          <div class="controls-card">
+            <h3>External Heat Spark Intensity</h3>
+            <div class="control-row">
+              <label>Temperature Level: <span id="val-heat">Warm</span></label>
+              <input type="range" id="slider-heat" min="0" max="100" value="40">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: LE CHATELIER - PRESSURE -->
+      <div class="step-container" id="step-4" data-layout="split">
+        <div class="visual-pane">
+          <div class="visual-host" id="visual-step4"></div>
+        </div>
+        <div class="divider" role="separator" aria-orientation="vertical"></div>
+        <div class="explanation-pane">
+          <h2>4. Pressure & Volume shifts</h2>
+          <div class="description">
+            Reducing container volume increases pressure and collision rates. The system relieves this crowded stress by shifting toward the side with <strong>fewer gas molecules</strong>.
+          </div>
+          
+          <div class="eq-wrap">
+            <div class="eq-state" data-formula="2A\,(\text{Monomer, Red}) \rightleftharpoons A_2\,(\text{Dimer, Blue})"></div>
+            <div class="eq-state" data-formula="\textcolor{#89b4fa}{\text{Decrease Volume } \implies \text{Pressure}\uparrow \implies \text{Shift Right } (\rightarrow \text{ 1 Dimer})}"></div>
+            <div class="eq-state" data-formula="\textcolor{#f5c2e7}{\text{Increase Volume } \implies \text{Pressure}\downarrow \implies \text{Shift Left } (\leftarrow \text{ 2 Monomers})}"></div>
+          </div>
+          
+          <div class="eq-controls">
+            <button class="eq-btn eq-prev-btn">◀ Prev Step</button>
+            <span class="eq-indicator">1 / 3</span>
+            <button class="eq-btn eq-next-btn">Next Step ▶</button>
+          </div>
+
+          <div class="controls-card">
+            <h3>Piston Volume Control</h3>
+            <div class="control-row">
+              <label>Volume: <span id="val-volume">Medium</span></label>
+              <input type="range" id="slider-volume" min="1" max="10" value="5">
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+    
+    <footer>
+      <button class="nav-btn" id="prev-step-btn">◀ Previous Step</button>
+      <div class="step-dots">
+        <span class="dot active"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+      <button class="nav-btn" id="next-step-btn">Next Step ▶</button>
+    </footer>
+  </div>
+
+  <script>
+    // System Theme Colors mapping to Catppuccin Mocha
+    const THEME = {
+      bg: '#1e1e2e',
+      panel: '#313244',
+      text: '#cdd6f4',
+      muted: '#6c7086',
+      grid: '#45475a',
+      axis: '#bac2de',
+      accent1: '#89b4fa', // blue
+      accent2: '#f5c2e7', // pink
+      accent3: '#a6e3a1', // green
+      hover: '#f9e2af'    // yellow
+    };
+
+    // Equations Control Indices State
+    const eqIndices = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    const totalSteps = 4;
+    let currentStepIdx = 1;
+    let activeSketch = null;
+
+    // KaTeX helpers
+    function safeRenderKatex(formula, element) {
+      const cleaned = formula
+        .replace(/^\s*\$\$?|\$\$?\s*$/g, '')
+        .replace(/^\s*\\[\(\[]|\\[\)\]]\s*$/g, '')
+        .trim();
+      const checkExist = setInterval(() => {
+        if (typeof window.katex !== 'undefined') {
+          clearInterval(checkExist);
+          try {
+            window.katex.render(cleaned, element, { throwOnError: false, displayMode: true });
+          } catch (err) { console.error(err); }
+        }
+      }, 30);
+    }
+
+    function safeAutoRender(rootElement) {
+      const tryRender = setInterval(() => {
+        if (typeof window.renderMathInElement !== 'undefined') {
+          clearInterval(tryRender);
+          window.renderMathInElement(rootElement, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$',  right: '$',  display: false},
+              {left: '\\(', right: '\\)', display: false},
+              {left: '\\[', right: '\\]', display: true}
+            ],
+            throwOnError: false,
+            ignoredTags: ['script','noscript','style','textarea','pre','code','option']
+          });
+        }
+      }, 30);
+    }
+
+    function setEquationState(stepIdx, eqIdx) {
+      eqIndices[stepIdx] = eqIdx;
+      const stepEl = document.getElementById(`step-${stepIdx}`);
+      const states = stepEl.querySelectorAll('.eq-state');
+      const prevBtn = stepEl.querySelector('.eq-prev-btn');
+      const nextBtn = stepEl.querySelector('.eq-next-btn');
+      const indicator = stepEl.querySelector('.eq-indicator');
+      
+      states.forEach((el, idx) => {
+        if (idx === eqIdx) {
+          el.style.display = 'block';
+          gsap.fromTo(el, { opacity: 0, y: 5 }, { opacity: 1, y: 0, duration: 0.3 });
+          const formula = el.getAttribute('data-formula');
+          safeRenderKatex(formula, el);
+        } else {
+          el.style.display = 'none';
+        }
+      });
+      
+      if (prevBtn) prevBtn.disabled = (eqIdx === 0);
+      if (nextBtn) nextBtn.disabled = (eqIdx === states.length - 1);
+      if (indicator) indicator.textContent = `${eqIdx + 1} / ${states.length}`;
+      
+      safeAutoRender(stepEl);
+    }
+
+    // Teardown previous p5 canvas
+    function destroyActiveSketch() {
+      if (activeSketch) {
+        activeSketch.remove();
+        activeSketch = null;
+      }
+    }
+
+    // Trigger resized visualization hook
+    function triggerActiveResize() {
+      if (activeSketch && typeof activeSketch.windowResized === 'function') {
+        activeSketch.windowResized();
+      }
+    }
+    window.addEventListener('resize', triggerActiveResize);
+
+    // ==========================================
+    // STEP 1 SKETCH: COLLISION THEORY
+    // ==========================================
+    function loadStep1(containerId) {
+      destroyActiveSketch();
+      const container = document.getElementById(containerId);
+      
+      const sketch = (p) => {
+        let particles = [];
+        let successes = [];
+        let totalCollisions = 0;
+        let successfulCollisions = 0;
+        
+        const sConc = document.getElementById('slider-conc');
+        const sTemp = document.getElementById('slider-temp');
+        const vConc = document.getElementById('val-conc');
+        const vTemp = document.getElementById('val-temp');
+        
+        p.setup = () => {
+          p.createCanvas(container.clientWidth, container.clientHeight);
+          updateParticleCount();
+        };
+        
+        function updateParticleCount() {
+          let targetCount = parseInt(sConc.value);
+          while (particles.length < targetCount) {
+            particles.push({
+              x: p.random(20, p.width - 20),
+              y: p.random(20, p.height - 20),
+              vx: p.random(-1.8, 1.8),
+              vy: p.random(-1.8, 1.8),
+              type: p.random() > 0.5 ? 'A' : 'B',
+              radius: 7
+            });
+          }
+          while (particles.length > targetCount) {
+            particles.pop();
+          }
+        }
+        
+        p.draw = () => {
+          p.background('#11111b');
+          
+          let tempVal = parseInt(sTemp.value);
+          vConc.textContent = sConc.value;
+          vTemp.textContent = tempVal > 7 ? "HIGH ⚡" : (tempVal < 4 ? "LOW ❄️" : "MEDIUM 🌡️");
+          
+          updateParticleCount();
+          let speedMult = p.map(tempVal, 1, 10, 0.4, 3.2);
+          
+          // Update positions
+          for (let pt of particles) {
+            pt.x += pt.vx * speedMult;
+            pt.y += pt.vy * speedMult;
+            
+            if (pt.x < pt.radius || pt.x > p.width - pt.radius) {
+              pt.vx *= -1;
+              pt.x = p.constrain(pt.x, pt.radius, p.width - pt.radius);
+            }
+            if (pt.y < pt.radius || pt.y > p.height - pt.radius) {
+              pt.vy *= -1;
+              pt.y = p.constrain(pt.y, pt.radius, p.height - pt.radius);
+            }
+          }
+          
+          // Collisions
+          for (let i = 0; i < particles.length; i++) {
+            for (let j = i + 1; j < particles.length; j++) {
+              let p1 = particles[i];
+              let p2 = particles[j];
+              if (p1.type !== p2.type) {
+                let d = p.dist(p1.x, p1.y, p2.x, p2.y);
+                if (d < p1.radius + p2.radius) {
+                  // Bounce velocity swap
+                  let tx = p1.vx; let ty = p1.vy;
+                  p1.vx = p2.vx; p1.vy = p2.vy;
+                  p2.vx = tx; p2.vy = ty;
+                  
+                  totalCollisions++;
+                  
+                  // Calculate energy (dependent on Temp / speed scale)
+                  let kEnergy = (p.dist(0, 0, p1.vx - p2.vx, p1.vy - p2.vy)) * speedMult;
+                  if (kEnergy > 3.0) {
+                    successfulCollisions++;
+                    successes.push({
+                      x: (p1.x + p2.x) / 2,
+                      y: (p1.y + p2.y) / 2,
+                      age: 0
+                    });
+                  }
+                }
+              }
+            }
+          }
+          
+          // Render particles
+          for (let pt of particles) {
+            p.noStroke();
+            p.fill(pt.type === 'A' ? '#f5c2e7' : '#89b4fa');
+            p.ellipse(pt.x, pt.y, pt.radius * 2);
+          }
+          
+          // Success explosion rings
+          p.noFill();
+          p.strokeWeight(1.5);
+          for (let i = successes.length - 1; i >= 0; i--) {
+            let s = successes[i];
+            let alpha = p.map(s.age, 0, 12, 255, 0);
+            p.stroke(249, 226, 175, alpha);
+            p.ellipse(s.x, s.y, s.age * 4.5);
+            s.age++;
+            if (s.age > 12) successes.splice(i, 1);
+          }
+          
+          // Analytics Box
+          p.fill('rgba(49, 50, 68, 0.85)');
+          p.stroke('#45475a');
+          p.strokeWeight(1);
+          p.rect(15, 15, 230, 75, 6);
+          
+          p.fill('#cdd6f4');
+          p.noStroke();
+          p.textSize(11);
+          p.textStyle(p.BOLD);
+          p.text(`Total Collisions: ${totalCollisions}`, 25, 33);
+          p.fill('#a6e3a1');
+          p.text(`Reacted Collisions: ${successfulCollisions}`, 25, 51);
+          p.fill('#bac2de');
+          p.textStyle(p.NORMAL);
+          let rate = totalCollisions > 0 ? (successfulCollisions / totalCollisions * 100).toFixed(1) : 0;
+          p.text(`Ea Barrier Breakthrough: ${rate}%`, 25, 70);
+        };
+        
+        p.windowResized = () => {
+          p.resizeCanvas(container.clientWidth, container.clientHeight);
+        };
+      };
+      
+      activeSketch = new p5(sketch, container);
+    }
+
+    // ==========================================
+    // STEP 2 SKETCH: EQUILIBRIUM GRAPH
+    // ==========================================
+    function loadStep2(containerId) {
+      destroyActiveSketch();
+      const container = document.getElementById(containerId);
+      
+      const sketch = (p) => {
+        let particles = [];
+        const maxCapacity = 50;
+        let history = [];
+        
+        const sEaf = document.getElementById('slider-eaf');
+        const sEar = document.getElementById('slider-ear');
+        const vEaf = document.getElementById('val-eaf');
+        const vEar = document.getElementById('val-ear');
+        
+        p.setup = () => {
+          p.createCanvas(container.clientWidth, container.clientHeight);
+          for (let i = 0; i < maxCapacity; i++) {
+            particles.push({
+              x: p.random(15, p.width - 15),
+              y: p.random(15, p.height * 0.45),
+              vx: p.random(-1.5, 1.5),
+              vy: p.random(-1.5, 1.5),
+              type: i < maxCapacity * 0.7 ? 'A' : 'B', // initially mostly reactant A
+              radius: 6.5
+            });
+          }
+        };
+        
+        p.draw = () => {
+          p.background('#11111b');
+          
+          let valEaf = parseFloat(sEaf.value);
+          let valEar = parseFloat(sEar.value);
+          vEaf.textContent = valEaf > 7 ? "HIGH" : (valEaf < 4 ? "LOW" : "MED");
+          vEar.textContent = valEar > 7 ? "HIGH" : (valEar < 4 ? "LOW" : "MED");
+          
+          let boxH = p.height * 0.52;
+          
+          // Container Border
+          p.stroke('#45475a');
+          p.strokeWeight(2);
+          p.noFill();
+          p.rect(6, 6, p.width - 12, boxH);
+          
+          let countA = 0;
+          let countB = 0;
+          
+          for (let pt of particles) {
+            pt.x += pt.vx;
+            pt.y += pt.vy;
+            
+            if (pt.x < pt.radius + 6 || pt.x > p.width - pt.radius - 6) {
+              pt.vx *= -1;
+              pt.x = p.constrain(pt.x, pt.radius + 6, p.width - pt.radius - 6);
+            }
+            if (pt.y < pt.radius + 6 || pt.y > boxH - pt.radius) {
+              pt.vy *= -1;
+              pt.y = p.constrain(pt.y, pt.radius + 6, boxH - pt.radius);
+            }
+            
+            // Reaction Conversion probabilities based on activation energy barrier sliders
+            if (pt.type === 'A') {
+              countA++;
+              let forwardProb = p.map(valEaf, 1, 10, 0.015, 0.0006);
+              if (p.random() < forwardProb) pt.type = 'B';
+            } else {
+              countB++;
+              let reverseProb = p.map(valEar, 1, 10, 0.015, 0.0006);
+              if (p.random() < reverseProb) pt.type = 'A';
+            }
+            
+            p.noStroke();
+            p.fill(pt.type === 'A' ? '#f5c2e7' : '#89b4fa');
+            p.ellipse(pt.x, pt.y, pt.radius * 2);
+          }
+          
+          // Graph bounds
+          let graphY = boxH + 18;
+          let graphH = p.height - graphY - 10;
+          
+          p.stroke('#45475a');
+          p.strokeWeight(1);
+          p.fill('rgba(30, 30, 46, 0.5)');
+          p.rect(6, graphY, p.width - 12, graphH);
+          
+          // Capture data history
+          if (p.frameCount % 4 === 0) {
+            history.push({ a: countA, b: countB });
+            if (history.length > p.width - 24) history.shift();
+          }
+          
+          // Draw real-time concentration graphs
+          p.noFill();
+          p.strokeWeight(2);
+          
+          // Reactant A Line (Pink)
+          p.stroke('#f5c2e7');
+          p.beginShape();
+          for (let i = 0; i < history.length; i++) {
+            let gx = p.map(i, 0, history.length - 1, 12, p.width - 12);
+            let gy = p.map(history[i].a, 0, maxCapacity, graphY + graphH - 6, graphY + 6);
+            p.vertex(gx, gy);
+          }
+          p.endShape();
+          
+          // Product B Line (Blue)
+          p.stroke('#89b4fa');
+          p.beginShape();
+          for (let i = 0; i < history.length; i++) {
+            let gx = p.map(i, 0, history.length - 1, 12, p.width - 12);
+            let gy = p.map(history[i].b, 0, maxCapacity, graphY + graphH - 6, graphY + 6);
+            p.vertex(gx, gy);
+          }
+          p.endShape();
+          
+          // Small labels on graph
+          p.noStroke();
+          p.fill('#f5c2e7');
+          p.textSize(10);
+          p.text(`[Reactant] (Pink): ${countA}`, 12, graphY + 14);
+          p.fill('#89b4fa');
+          p.text(`[Product] (Blue): ${countB}`, 12, graphY + 26);
+        };
+        
+        p.windowResized = () => {
+          p.resizeCanvas(container.clientWidth, container.clientHeight);
+        };
+      };
+      
+      activeSketch = new p5(sketch, container);
+    }
+
+    // ==========================================
+    // STEP 3 SKETCH: TEMPERATURE EXOTHERMIC
+    // ==========================================
+    function loadStep3(containerId) {
+      destroyActiveSketch();
+      const container = document.getElementById(containerId);
+      
+      const sketch = (p) => {
+        let particles = [];
+        let sparks = [];
+        const numChemicals = 35;
+        
+        const sHeat = document.getElementById('slider-heat');
+        const vHeat = document.getElementById('val-heat');
+        
+        p.setup = () => {
+          p.createCanvas(container.clientWidth, container.clientHeight);
+          for (let i = 0; i < numChemicals; i++) {
+            particles.push({
+              x: p.random(15, p.width - 15),
+              y: p.random(40, p.height - 15),
+              vx: p.random(-1.2, 1.2),
+              vy: p.random(-1.2, 1.2),
+              type: p.random() > 0.5 ? 'A' : 'B',
+              radius: 7.5
+            });
+          }
+        };
+        
+        p.draw = () => {
+          p.background('#11111b');
+          
+          let sparkCount = parseInt(sHeat.value);
+          vHeat.textContent = sparkCount > 70 ? "HOT 🔥" : (sparkCount < 25 ? "COLD ❄️" : "WARM 🌡️");
+          
+          // Spawn/Kill sparks dynamically
+          while (sparks.length < sparkCount) {
+            sparks.push({
+              x: p.random(10, p.width - 10),
+              y: p.random(10, p.height - 10),
+              vx: p.random(-2.5, 2.5),
+              vy: p.random(-2.5, 2.5),
+              radius: 2.5
+            });
+          }
+          while (sparks.length > sparkCount) {
+            sparks.pop();
+          }
+          
+          // Draw Heat Sparks (Thermal energy)
+          for (let sp of sparks) {
+            sp.x += sp.vx;
+            sp.y += sp.vy;
+            
+            if (sp.x < 3 || sp.x > p.width - 3) sp.vx *= -1;
+            if (sp.y < 3 || sp.y > p.height - 3) sp.vy *= -1;
+            
+            p.noStroke();
+            p.fill(249, 226, 175, 180); // yellow heat glow
+            p.ellipse(sp.x, sp.y, sp.radius * 2);
+          }
+          
+          let redCount = 0;
+          let blueCount = 0;
+          
+          for (let pt of particles) {
+            pt.x += pt.vx;
+            pt.y += pt.vy;
+            
+            if (pt.x < pt.radius || pt.x > p.width - pt.radius) pt.vx *= -1;
+            if (pt.y < pt.radius || pt.y > p.height - pt.radius) pt.vy *= -1;
+            
+            // Exothermic mechanics:
+            // A (Red) spontaneously releases a Heat Spark and converts to B (Blue).
+            if (pt.type === 'A') {
+              redCount++;
+              if (p.random() < 0.006) {
+                pt.type = 'B';
+                if (sparks.length < 100) {
+                  sparks.push({
+                    x: pt.x,
+                    y: pt.y,
+                    vx: p.random(-2, 2),
+                    vy: p.random(-2, 2),
+                    radius: 2.5
+                  });
+                }
+              }
+            } else {
+              // B (Blue) absorbs nearby Heat Sparks to shift reverse back into A (Red).
+              blueCount++;
+              for (let i = 0; i < sparks.length; i++) {
+                let sp = sparks[i];
+                let d = p.dist(pt.x, pt.y, sp.x, sp.y);
+                if (d < 22) {
+                  if (p.random() < 0.12) {
+                    pt.type = 'A';
+                    sparks.splice(i, 1); // consume the heat spark
+                    break;
+                  }
+                }
+              }
+            }
+            
+            p.noStroke();
+            p.fill(pt.type === 'A' ? '#f5c2e7' : '#89b4fa');
+            p.ellipse(pt.x, pt.y, pt.radius * 2);
+          }
+          
+          // Ratio comparison bar inside canvas
+          let barW = p.width - 30;
+          p.fill('#313244');
+          p.rect(15, 10, barW, 16, 4);
+          
+          let ratioA = redCount / numChemicals;
+          let widthA = barW * ratioA;
+          p.fill('#f5c2e7');
+          p.rect(15, 10, widthA, 16, 4);
+          
+          p.fill('#cdd6f4');
+          p.textSize(10);
+          p.textAlign(p.LEFT, p.CENTER);
+          p.text(`Reactants: ${Math.round(ratioA * 100)}%`, 22, 18);
+          p.textAlign(p.RIGHT, p.CENTER);
+          p.text(`Products: ${Math.round((1 - ratioA) * 100)}%`, p.width - 22, 18);
+        };
+        
+        p.windowResized = () => {
+          p.resizeCanvas(container.clientWidth, container.clientHeight);
+        };
+      };
+      
+      activeSketch = new p5(sketch, container);
+    }
+
+    // ==========================================
+    // STEP 4 SKETCH: PRESSURE / VOLUME
+    // ==========================================
+    function loadStep4(containerId) {
+      destroyActiveSketch();
+      const container = document.getElementById(containerId);
+      
+      const sketch = (p) => {
+        let particles = [];
+        const baseAtomCount = 40;
+        
+        const sVol = document.getElementById('slider-volume');
+        const vVol = document.getElementById('val-volume');
+        
+        p.setup = () => {
+          p.createCanvas(container.clientWidth, container.clientHeight);
+          for (let i = 0; i < baseAtomCount; i++) {
+            particles.push({
+              x: p.random(15, p.width - 15),
+              y: p.random(100, p.height - 15),
+              vx: p.random(-1.5, 1.5),
+              vy: p.random(-1.5, 1.5),
+              isDimer: false,
+              radius: 6.5
+            });
+          }
+        };
+        
+        p.draw = () => {
+          p.background('#11111b');
+          
+          let volumeVal = parseFloat(sVol.value);
+          vVol.textContent = volumeVal > 7 ? "LARGE ↔️" : (volumeVal < 4 ? "SMALL 🗜️" : "MEDIUM ⚖️");
+          
+          // Calculate volume ceiling height
+          let pistonY = p.map(volumeVal, 1, 10, p.height * 0.65, 30);
+          
+          // Draw metallic piston cap
+          p.fill('#45475a');
+          p.noStroke();
+          p.rect(6, pistonY - 15, p.width - 12, 15, 2);
+          p.rect(p.width / 2 - 12, 0, 24, pistonY - 15);
+          
+          // Boundary Box
+          p.stroke('#45475a');
+          p.strokeWeight(3.5);
+          p.noFill();
+          p.rect(6, pistonY, p.width - 12, p.height - pistonY - 6);
+          
+          // Physics iteration
+          for (let pt of particles) {
+            pt.x += pt.vx;
+            pt.y += pt.vy;
+            
+            let topBound = pistonY + pt.radius + 4;
+            let botBound = p.height - pt.radius - 8;
+            let leftBound = 6 + pt.radius + 4;
+            let rightBound = p.width - 6 - pt.radius - 4;
+            
+            if (pt.x < leftBound || pt.x > rightBound) {
+              pt.vx *= -1;
+              pt.x = p.constrain(pt.x, leftBound, rightBound);
+            }
+            if (pt.y < topBound || pt.y > botBound) {
+              pt.vy *= -1;
+              pt.y = p.constrain(pt.y, topBound, botBound);
+            }
+          }
+          
+          // Dimer association mechanics:
+          // Smaller volume = denser = more collisions = monomer combination.
+          for (let i = 0; i < particles.length; i++) {
+            for (let j = i + 1; j < particles.length; j++) {
+              let p1 = particles[i];
+              let p2 = particles[j];
+              if (!p1.isDimer && !p2.isDimer) {
+                let d = p.dist(p1.x, p1.y, p2.x, p2.y);
+                if (d < p1.radius + p2.radius + 3) {
+                  // Probability scale is inversely proportional to volume slider
+                  let fusionProb = p.map(volumeVal, 1, 10, 0.45, 0.04);
+                  if (p.random() < fusionProb) {
+                    p1.isDimer = true;
+                    p1.radius = 11;
+                    particles.splice(j, 1);
+                    break;
+                  }
+                }
+              }
+            }
+          }
+          
+          // Spontaneous dissociation back to monomers (constant biological dissociation rate)
+          for (let i = particles.length - 1; i >= 0; i--) {
+            let pt = particles[i];
+            if (pt.isDimer) {
+              if (p.random() < 0.005) {
+                pt.isDimer = false;
+                pt.radius = 6.5;
+                particles.push({
+                  x: p.constrain(pt.x + p.random(-12, 12), 15, p.width - 15),
+                  y: p.constrain(pt.y + p.random(-12, 12), pistonY + 15, p.height - 15),
+                  vx: p.random(-1.5, 1.5),
+                  vy: p.random(-1.5, 1.5),
+                  isDimer: false,
+                  radius: 6.5
+                });
+              }
+            }
+          }
+          
+          // Draw species
+          let monoCount = 0;
+          let dimerCount = 0;
+          for (let pt of particles) {
+            p.noStroke();
+            if (pt.isDimer) {
+              dimerCount++;
+              p.fill('#89b4fa');
+              p.ellipse(pt.x - 4, pt.y, 11);
+              p.ellipse(pt.x + 4, pt.y, 11);
+            } else {
+              monoCount++;
+              p.fill('#f5c2e7');
+              p.ellipse(pt.x, pt.y, pt.radius * 2);
+            }
+          }
+          
+          // Analytics board
+          p.fill('rgba(49, 50, 68, 0.85)');
+          p.rect(15, pistonY + 15, 140, 44, 4);
+          p.fill('#cdd6f4');
+          p.textSize(9.5);
+          p.textStyle(p.BOLD);
+          p.text(`Monomers (2A): ${monoCount}`, 22, pistonY + 28);
+          p.fill('#89b4fa');
+          p.text(`Dimers (A2): ${dimerCount}`, 22, pistonY + 43);
+        };
+        
+        p.windowResized = () => {
+          p.resizeCanvas(container.clientWidth, container.clientHeight);
+        };
+      };
+      
+      activeSketch = new p5(sketch, container);
+    }
+
+    // ==========================================
+    // GLOBAL FLOW MANAGEMENT & DIVIDER DRAGGING
+    // ==========================================
+    function showStep(stepIdx) {
+      currentStepIdx = stepIdx;
+      
+      document.querySelectorAll('.step-container').forEach(el => {
+        el.classList.remove('active');
+      });
+      
+      const activeStep = document.getElementById(`step-${stepIdx}`);
+      activeStep.classList.add('active');
+      
+      // Update global navigation dots
+      document.querySelectorAll('.step-dots .dot').forEach((dot, idx) => {
+        if (idx === stepIdx - 1) dot.classList.add('active');
+        else dot.classList.remove('active');
+      });
+      
+      document.getElementById('prev-step-btn').disabled = (stepIdx === 1);
+      document.getElementById('next-step-btn').disabled = (stepIdx === totalSteps);
+      
+      // Load selected visualization step
+      if (stepIdx === 1) {
+        loadStep1('visual-step1');
+        setEquationState(1, eqIndices[1]);
+      } else if (stepIdx === 2) {
+        loadStep2('visual-step2');
+        setEquationState(2, eqIndices[2]);
+      } else if (stepIdx === 3) {
+        loadStep3('visual-step3');
+        setEquationState(3, eqIndices[3]);
+      } else if (stepIdx === 4) {
+        loadStep4('visual-step4');
+        setEquationState(4, eqIndices[4]);
+      }
+    }
+
+    // Set up local equation state changes inside pane
+    document.querySelectorAll('.step-container').forEach((stepEl, idx) => {
+      const stepNum = idx + 1;
+      const prevBtn = stepEl.querySelector('.eq-prev-btn');
+      const nextBtn = stepEl.querySelector('.eq-next-btn');
+      
+      if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+          if (eqIndices[stepNum] > 0) {
+            setEquationState(stepNum, eqIndices[stepNum] - 1);
+          }
+        });
+      }
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          const statesCount = stepEl.querySelectorAll('.eq-state').length;
+          if (eqIndices[stepNum] < statesCount - 1) {
+            setEquationState(stepNum, eqIndices[stepNum] + 1);
+          }
+        });
+      }
+    });
+
+    // Global step change events
+    document.getElementById('prev-step-btn').addEventListener('click', () => {
+      if (currentStepIdx > 1) showStep(currentStepIdx - 1);
+    });
+    document.getElementById('next-step-btn').addEventListener('click', () => {
+      if (currentStepIdx < totalSteps) showStep(currentStepIdx + 1);
+    });
+
+    // Keyboard support: Arrow keys for local equations, Shift + Arrow for step flow
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') {
+        if (e.shiftKey) {
+          if (currentStepIdx > 1) showStep(currentStepIdx - 1);
+        } else {
+          if (eqIndices[currentStepIdx] > 0) {
+            setEquationState(currentStepIdx, eqIndices[currentStepIdx] - 1);
+          }
+        }
+      } else if (e.key === 'ArrowRight') {
+        if (e.shiftKey) {
+          if (currentStepIdx < totalSteps) showStep(currentStepIdx + 1);
+        } else {
+          const statesCount = document.getElementById(`step-${currentStepIdx}`).querySelectorAll('.eq-state').length;
+          if (eqIndices[currentStepIdx] < statesCount - 1) {
+            setEquationState(currentStepIdx, eqIndices[currentStepIdx] + 1);
+          }
+        }
+      }
+    });
+
+    // Drag-to-resize divider implementation
+    document.querySelectorAll('.step-container').forEach(step => {
+      const divider = step.querySelector('.divider');
+      if (divider) {
+        divider.addEventListener('pointerdown', (e) => {
+          divider.setPointerCapture(e.pointerId);
+          step.classList.add('dragging');
+          document.body.style.userSelect = 'none';
+          document.body.style.cursor = 'col-resize';
+          
+          const onPointerMove = (moveEvt) => {
+            const rect = step.getBoundingClientRect();
+            let pct = ((moveEvt.clientX - rect.left) / rect.width) * 100;
+            pct = Math.max(30, Math.min(80, pct));
+            step.style.setProperty('--visual-w', `${pct}%`);
+            triggerActiveResize();
+          };
+          
+          const onPointerUp = () => {
+            step.classList.remove('dragging');
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+            divider.releasePointerCapture(e.pointerId);
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+            triggerActiveResize();
+          };
+          
+          window.addEventListener('pointermove', onPointerMove);
+          window.addEventListener('pointerup', onPointerUp);
+        });
+      }
+    });
+
+    // Initial load
+    showStep(1);
+  </script>
+</body>
+</html>

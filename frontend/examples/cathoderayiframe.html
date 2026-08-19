@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cathode Rays & Crookes Tube Visualization</title>
+  
+  <!-- GSAP for robust animations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  
+  <!-- p5.js for high-performance interactive physics/particle simulations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+  
+  <!-- Three.js for interactive 3D experiments (e.g. Maltese Cross Shadow Casting) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- KaTeX for advanced mathematical rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    /* Catppuccin Mocha Theme (Dark Mode Default) */
+    :root {
+      --bg: #1e1e2e;
+      --panel: #313244;
+      --text: #cdd6f4;
+      --muted: #6c7086;
+      --grid: #45475a;
+      --axis: #bac2de;
+      --accent1: #89b4fa; /* Blue */
+      --accent2: #f5c2e7; /* Pink */
+      --accent3: #a6e3a1; /* Green / Phosphor glow */
+      --hover: #f9e2af;  /* Yellow */
+    }
+
+    /* Absolute Viewport Containment */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Header Bar */
+    header {
+      flex: 0 0 auto;
+      background: var(--panel);
+      padding: 0.75rem 1.5rem;
+      border-bottom: 2px solid var(--grid);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--accent1);
+    }
+
+    .step-indicator {
+      font-size: 0.85rem;
+      color: var(--muted);
+      background: var(--bg);
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      border: 1px solid var(--grid);
+    }
+
+    /* Main Workspace Stage */
+    #stage {
+      flex: 1 1 0;
+      min-height: 0;
+      min-width: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Step Container Design */
+    .step-container {
+      position: absolute;
+      inset: 0;
+      display: none; /* Controlled by JS step manager */
+      grid-template-columns: var(--visual-w, 60%) 6px minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+      height: 100%;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .step-container.active {
+      display: grid;
+    }
+
+    /* Panels */
+    .visual-pane {
+      position: relative;
+      background: var(--bg);
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .visual-host {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Resizable Divider */
+    .divider {
+      grid-column: 2;
+      height: 100%;
+      cursor: col-resize;
+      background: var(--grid);
+      position: relative;
+      transition: background 0.2s;
+    }
+
+    .divider:hover, .divider.dragging {
+      background: var(--hover);
+    }
+
+    .divider::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 30px;
+      background: var(--bg);
+      border-radius: 1px;
+    }
+
+    .info-pane {
+      grid-column: 3;
+      background: var(--panel);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-width: 0;
+      min-height: 0;
+      overflow-y: auto;
+      border-left: 1px solid var(--grid);
+    }
+
+    .info-content {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-height: 0;
+    }
+
+    .info-pane h2 {
+      font-size: 1.4rem;
+      color: var(--accent1);
+      margin-bottom: 0.5rem;
+    }
+
+    .info-pane p {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--text);
+    }
+
+    /* Equation Section */
+    .equation-section {
+      background: var(--bg);
+      border: 1px solid var(--grid);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .eq-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0.5rem 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent1) transparent;
+      text-align: center;
+    }
+
+    .eq-state {
+      display: inline-block;
+      white-space: nowrap;
+      min-width: max-content;
+      font-size: clamp(1rem, 2vw, 1.4rem);
+      transition: opacity 0.3s ease;
+    }
+
+    .eq-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Step Navigation Controls (Footer) */
+    footer {
+      flex: 0 0 auto;
+      background: var(--panel);
+      padding: 1rem 1.5rem;
+      border-top: 2px solid var(--grid);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .btn {
+      background: var(--grid);
+      color: var(--text);
+      border: none;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: var(--accent1);
+      color: var(--bg);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-accent {
+      background: var(--accent1);
+      color: var(--bg);
+    }
+
+    .btn-accent:hover {
+      background: var(--hover);
+      color: var(--bg);
+    }
+
+    .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    /* Sliders and Interactive Forms */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      background: var(--bg);
+      padding: 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--grid);
+    }
+
+    .control-label {
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: var(--accent2);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--grid);
+      outline: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent1);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Tooltip / Status indicator overlay in Visual Pane */
+    .hud-overlay {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      background: rgba(30, 30, 46, 0.85);
+      border: 1px solid var(--grid);
+      padding: 0.75rem;
+      border-radius: 6px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      z-index: 5;
+    }
+
+    .hud-item {
+      font-size: 0.8rem;
+      font-family: monospace;
+    }
+
+    /* Keyframe highlights */
+    .highlight-glow {
+      box-shadow: 0 0 15px var(--accent3);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    <!-- Header -->
+    <header>
+      <h1>Cathode Rays & Crookes Tube</h1>
+      <div class="step-indicator" id="step-indicator">Step 1 of 4</div>
+    </header>
+
+    <!-- Interactive Stage -->
+    <div id="stage">
+
+      <!-- STEP 1: Tube Structure & Gas Pressure Glow Dynamics -->
+      <div class="step-container" id="step-1" data-layout="split">
+        <div class="visual-pane">
+          <div class="hud-overlay">
+            <div class="hud-item" id="hud-v">Voltage: 5.0 kV</div>
+            <div class="hud-item" id="hud-p">Pressure: 100.0 mmHg</div>
+            <div class="hud-item" id="hud-state" style="color: var(--accent2);">State: Dark Discharge</div>
+          </div>
+          <div class="visual-host" id="canvas-host-1"></div>
+        </div>
+        <div class="divider" role="separator"></div>
+        <div class="info-pane">
+          <div class="info-content">
+            <h2>1. Anatomy & Pressure Thresholds</h2>
+            <p>A <strong>Crookes tube</strong> is an evacuated glass envelope containing two electrodes: a negative <strong>Cathode</strong> and a positive <strong>Anode</strong>.</p>
+            <p>At standard atmospheric pressure ($100 \text{ mmHg}$), high voltage fails to bridge the gap due to frequent collisions with gas molecules. Lowering pressure increases the <strong>mean free path</strong> $\lambda$ of ions.</p>
+            
+            <div class="control-group">
+              <div class="control-label">
+                <span>Voltage</span>
+                <span id="val-v">5.0 kV</span>
+              </div>
+              <input type="range" class="slider" id="slide-v" min="0" max="10" step="0.5" value="5">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>Vacuum Pressure</span>
+                <span id="val-p">100.0 mmHg</span>
+              </div>
+              <input type="range" class="slider" id="slide-p" min="-4" max="2" step="0.1" value="2">
+              <div style="font-size:0.7rem; color:var(--muted); text-align:right;">Logarithmic Scale</div>
+            </div>
+
+            <div class="equation-section">
+              <div class="control-label">Mean Free Path Equation</div>
+              <div class="eq-wrap">
+                <div class="eq-state" id="eq-s1"></div>
+              </div>
+              <p style="font-size:0.8rem; color:var(--muted);">As pressure $P$ decreases, the distance electrons travel without colliding ($\lambda$) dramatically increases.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Ionization & Electron Acceleration -->
+      <div class="step-container" id="step-2" data-layout="split">
+        <div class="visual-pane">
+          <div class="hud-overlay">
+            <div class="hud-item">E-Field Acceleration Active</div>
+            <div class="hud-item" id="hud-ion-count">Secondary Electrons: 0</div>
+          </div>
+          <div class="visual-host" id="canvas-host-2"></div>
+        </div>
+        <div class="divider" role="separator"></div>
+        <div class="info-pane">
+          <div class="info-content">
+            <h2>2. Mechanism of Formation</h2>
+            <p>At critical vacuum ($< 0.01\text{ mmHg}$), residual positive ions are violently pulled to the negative Cathode. Upon collision, they knock loose electrons via <strong>secondary emission</strong>.</p>
+            <p>These liberated electrons are accelerated by the intense electric field, shooting outward perpendicular to the cathode surface.</p>
+
+            <div class="equation-section">
+              <div class="eq-controls">
+                <button class="btn btn-sm" id="btn-eq-prev-2">◀ Prev Step</button>
+                <span id="eq-indicator-2" style="font-size:0.8rem; font-family:monospace;">1 / 3</span>
+                <button class="btn btn-sm btn-accent" id="btn-eq-next-2">Next Step ▶</button>
+              </div>
+              <div class="eq-wrap">
+                <div class="eq-state" id="eq-s2"></div>
+              </div>
+            </div>
+            
+            <p id="eq-explanation-2" style="font-size:0.85rem; border-left: 3px solid var(--accent1); padding-left: 0.5rem;"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Straight Line Travel & Shadow Casting -->
+      <div class="step-container" id="step-3" data-layout="split">
+        <div class="visual-pane">
+          <div class="hud-overlay">
+            <div class="hud-item">Interactive 3D View</div>
+            <div class="hud-item">Drag to Orbit / Scroll to Zoom</div>
+          </div>
+          <div class="visual-host" id="canvas-host-3"></div>
+        </div>
+        <div class="divider" role="separator"></div>
+        <div class="info-pane">
+          <div class="info-content">
+            <h2>3. Travel in Straight Lines</h2>
+            <p>To investigate the path of cathode rays, William Crookes placed a metal obstruction—a <strong>Maltese Cross</strong>—in their path.</p>
+            <p>Because the rays travel in straight lines and cannot pass through solid metal, they cast a razor-sharp shadow on the glowing phosphorescent screen at the back of the tube.</p>
+            
+            <div class="control-group">
+              <div class="control-label">Cross Position</div>
+              <button class="btn btn-accent" id="btn-toggle-cross" style="width:100%;">Raise / Lower Maltese Cross</button>
+            </div>
+            
+            <p style="font-size:0.85rem; color:var(--muted);">This experiment proved that cathode rays do not bend around obstacles like sound waves, behaving instead like rays of light radiating normally from the cathode.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Charged Deflection (Electric & Magnetic Fields) -->
+      <div class="step-container" id="step-4" data-layout="split">
+        <div class="visual-pane">
+          <div class="hud-overlay">
+            <div class="hud-item" id="hud-e-force">Electric Force (Fe): 0 N</div>
+            <div class="hud-item" id="hud-b-force">Magnetic Force (Fb): 0 N</div>
+          </div>
+          <div class="visual-host" id="canvas-host-4"></div>
+        </div>
+        <div class="divider" role="separator"></div>
+        <div class="info-pane">
+          <div class="info-content">
+            <h2>4. Electromagnetic Deflection</h2>
+            <p>Cathode rays carry a negative charge. Applying an <strong>electric field</strong> (plates) or a <strong>magnetic field</strong> (magnet) deflects the beam path.</p>
+            <p>J.J. Thomson used balanced perpendicular fields (Velocity Selector) to calculate the charge-to-mass ratio ($e/m$), proving they were fundamental particles: <strong>electrons</strong>.</p>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>Electric Field (E)</span>
+                <span id="val-e">0 V/m</span>
+              </div>
+              <input type="range" class="slider" id="slide-e" min="-10" max="10" step="1" value="0">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>Magnetic Field (B)</span>
+                <span id="val-b">0 T</span>
+              </div>
+              <input type="range" class="slider" id="slide-b" min="-10" max="10" step="1" value="0">
+            </div>
+
+            <div class="equation-section">
+              <div class="eq-controls">
+                <button class="btn btn-sm" id="btn-eq-prev-4">◀ Prev Step</button>
+                <span id="eq-indicator-4" style="font-size:0.8rem; font-family:monospace;">1 / 3</span>
+                <button class="btn btn-sm btn-accent" id="btn-eq-next-4">Next Step ▶</button>
+              </div>
+              <div class="eq-wrap">
+                <div class="eq-state" id="eq-s4"></div>
+              </div>
+            </div>
+            
+            <p id="eq-explanation-4" style="font-size:0.85rem; border-left: 3px solid var(--accent1); padding-left: 0.5rem;"></p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Navigation Footer -->
+    <footer>
+      <button class="btn" id="btn-prev">◀ Back</button>
+      <button class="btn btn-accent" id="btn-next">Next Step ▶</button>
+    </footer>
+  </div>
+
+  <script>
+    // Theme references matching CSS Variables
+    const THEME = {
+      bg: '#1e1e2e',
+      panel: '#313244',
+      text: '#cdd6f4',
+      muted: '#6c7086',
+      grid: '#45475a',
+      axis: '#bac2de',
+      accent1: '#89b4fa',
+      accent2: '#f5c2e7',
+      accent3: '#a6e3a1',
+      hover: '#f9e2af'
+    };
+
+    // Math render helpers
+    function safeRenderKatex(formula, element) {
+      const cleaned = formula
+        .replace(/^\s*\$\$?|\$\$?\s*$/g, '')
+        .replace(/^\s*\\[\(\[]|\\[\)\]]\s*$/g, '')
+        .trim();
+      const checkExist = setInterval(() => {
+        if (typeof window.katex !== 'undefined') {
+          clearInterval(checkExist);
+          try {
+            window.katex.render(cleaned, element, { throwOnError: false, displayMode: true });
+          } catch (err) { console.error(err); }
+        }
+      }, 50);
+    }
+
+    function safeAutoRender(rootElement) {
+      const tryRender = setInterval(() => {
+        if (typeof window.renderMathInElement !== 'undefined') {
+          clearInterval(tryRender);
+          window.renderMathInElement(rootElement, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$',  right: '$',  display: false},
+              {left: '\\(', right: '\\)', display: false},
+              {left: '\\[', right: '\\]', display: true}
+            ],
+            throwOnError: false,
+            ignoredTags: ['script','noscript','style','textarea','pre','code','option']
+          });
+        }
+      }, 50);
+    }
+
+    // Interactive Resizable Dividers
+    document.querySelectorAll('.divider').forEach(divider => {
+      const step = divider.closest('.step-container');
+      divider.addEventListener('pointerdown', (e) => {
+        divider.setPointerCapture(e.pointerId);
+        divider.classList.add('dragging');
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'col-resize';
+
+        const moveHandler = (evt) => {
+          const rect = step.getBoundingClientRect();
+          const pct = ((evt.clientX - rect.left) / rect.width) * 100;
+          const clamped = Math.max(30, Math.min(80, pct));
+          step.style.setProperty('--visual-w', clamped + '%');
+          triggerResize();
+        };
+
+        const upHandler = () => {
+          divider.releasePointerCapture(e.pointerId);
+          divider.classList.remove('dragging');
+          document.body.style.userSelect = '';
+          document.body.style.cursor = '';
+          window.removeEventListener('pointermove', moveHandler);
+          window.removeEventListener('pointerup', upHandler);
+          triggerResize();
+        };
+
+        window.addEventListener('pointermove', moveHandler);
+        window.addEventListener('pointerup', upHandler);
+      });
+    });
+
+    // Handle Resize Notifications for custom visual renderers
+    function triggerResize() {
+      const activeStepId = steps[currentStepIndex].id;
+      if (stepObjects[activeStepId] && typeof stepObjects[activeStepId].resize === 'function') {
+        stepObjects[activeStepId].resize();
+      }
+    }
+    window.addEventListener('resize', triggerResize);
+
+    // Global step state handling
+    const steps = [
+      { id: 'step-1' },
+      { id: 'step-2' },
+      { id: 'step-3' },
+      { id: 'step-4' }
+    ];
+    let currentStepIndex = 0;
+
+    function initStepManager() {
+      const btnPrev = document.getElementById('btn-prev');
+      const btnNext = document.getElementById('btn-next');
+      const indicator = document.getElementById('step-indicator');
+
+      function updateUI() {
+        steps.forEach((s, idx) => {
+          const container = document.getElementById(s.id);
+          if (idx === currentStepIndex) {
+            container.classList.add('active');
+            // Init Step code
+            if (stepObjects[s.id] && typeof stepObjects[s.id].init === 'function') {
+              stepObjects[s.id].init();
+            }
+            safeAutoRender(container);
+          } else {
+            container.classList.remove('active');
+            // Teardown Step code
+            if (stepObjects[s.id] && typeof stepObjects[s.id].destroy === 'function') {
+              stepObjects[s.id].destroy();
+            }
+          }
+        });
+
+        indicator.textContent = `Step ${currentStepIndex + 1} of ${steps.length}`;
+        btnPrev.disabled = currentStepIndex === 0;
+        btnNext.textContent = currentStepIndex === steps.length - 1 ? "Finish" : "Next Step ▶";
+      }
+
+      btnPrev.addEventListener('click', () => {
+        if (currentStepIndex > 0) {
+          currentStepIndex--;
+          updateUI();
+        }
+      });
+
+      btnNext.addEventListener('click', () => {
+        if (currentStepIndex < steps.length - 1) {
+          currentStepIndex++;
+          updateUI();
+        } else {
+          // loop back or finish event
+          currentStepIndex = 0;
+          updateUI();
+        }
+      });
+
+      // Keyboard Controls
+      window.addEventListener('keydown', (e) => {
+        if (e.shiftKey && e.key === 'ArrowRight') {
+          if (currentStepIndex < steps.length - 1) { currentStepIndex++; updateUI(); }
+        } else if (e.shiftKey && e.key === 'ArrowLeft') {
+          if (currentStepIndex > 0) { currentStepIndex--; updateUI(); }
+        }
+      });
+
+      updateUI();
+    }
+
+
+    /* ==========================================================
+       STEP 1 VISUALIZATION: Custom High-Fidelity 2D Discharge Canvas
+       ========================================================== */
+    let canvas1 = null;
+    const stepObjects = {};
+
+    stepObjects['step-1'] = {
+      init: function() {
+        const host = document.getElementById('canvas-host-1');
+        host.innerHTML = ''; // clear
+        
+        const canvas = document.createElement('canvas');
+        host.appendChild(canvas);
+        canvas1 = canvas;
+
+        const sliderV = document.getElementById('slide-v');
+        const sliderP = document.getElementById('slide-p');
+        const valV = document.getElementById('val-v');
+        const valP = document.getElementById('val-p');
+        const hudV = document.getElementById('hud-v');
+        const hudP = document.getElementById('hud-p');
+        const hudState = document.getElementById('hud-state');
+
+        // Dynamic pressure mapping (exponential/logarithmic visualization)
+        function getPressureValue(val) {
+          return Math.pow(10, parseFloat(val)).toFixed(4);
+        }
+
+        function getDischargeState(v, p) {
+          if (v < 1.0) return { name: "Dark Discharge (No excitation)", color: THEME.muted, glow: 0 };
+          if (p > 10.0) return { name: "Spark Gap Discharge", color: THEME.accent2, glow: 0.1 };
+          if (p > 1.0 && p <= 10.0) return { name: "Geissler Column Glow (Pink/Violet)", color: "#b39ddb", glow: 0.6 };
+          if (p > 0.01 && p <= 1.0) return { name: "Striations & Faraday Spaces", color: "#80deea", glow: 0.4 };
+          return { name: "Cathode Rays & Glass Phosphor (Green Glow)", color: THEME.accent3, glow: 1.0 };
+        }
+
+        const eqEl = document.getElementById('eq-s1');
+        safeRenderKatex(`\\lambda = \\frac{k_B T}{\\sqrt{2} \\pi d^2 P}`, eqEl);
+
+        let animationFrameId;
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+          canvas.width = host.clientWidth;
+          canvas.height = host.clientHeight;
+        }
+        this.resize = resize;
+        resize();
+
+        // Particles for the glow effect
+        let particles = [];
+        for(let i=0; i<80; i++) {
+          particles.push({
+            x: Math.random(),
+            y: Math.random(),
+            speed: Math.random() * 0.02 + 0.005,
+            size: Math.random() * 3 + 1
+          });
+        }
+
+        function draw() {
+          const v = parseFloat(sliderV.value);
+          const p = parseFloat(getPressureValue(sliderP.value));
+
+          valV.textContent = `${v.toFixed(1)} kV`;
+          valP.textContent = `${p} mmHg`;
+          hudV.textContent = `Voltage: ${v.toFixed(1)} kV`;
+          hudP.textContent = `Pressure: ${p} mmHg`;
+
+          const state = getDischargeState(v, p);
+          hudState.textContent = `State: ${state.name}`;
+          hudState.style.color = state.color;
+
+          ctx.fillStyle = THEME.bg;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Render physical glass envelope Crookes Tube representation
+          const w = canvas.width;
+          const h = canvas.height;
+          const tubeW = w * 0.8;
+          const tubeH = Math.min(h * 0.4, 180);
+          const tx = (w - tubeW) / 2;
+          const ty = (h - tubeH) / 2;
+
+          // Wire connectors / Stands
+          ctx.strokeStyle = THEME.grid;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(tx - 30, ty + tubeH/2);
+          ctx.lineTo(tx, ty + tubeH/2);
+          ctx.moveTo(tx + tubeW, ty + tubeH/2);
+          ctx.lineTo(tx + tubeW + 30, ty + tubeH/2);
+          ctx.stroke();
+
+          // Electrodes
+          const catX = tx + 40;
+          const anoX = tx + tubeW - 40;
+
+          // Cathode (-) Plate
+          ctx.fillStyle = THEME.accent2;
+          ctx.fillRect(catX - 5, ty + 20, 10, tubeH - 40);
+          
+          // Anode (+) Plate
+          ctx.fillStyle = THEME.accent1;
+          ctx.fillRect(anoX - 5, ty + 20, 10, tubeH - 40);
+
+          // Labels
+          ctx.fillStyle = THEME.text;
+          ctx.font = '12px monospace';
+          ctx.fillText("CATHODE (-)", catX - 40, ty + 15);
+          ctx.fillText("ANODE (+)", anoX - 30, ty + 15);
+
+          // Tube glass glow / Gas discharge animation
+          if (v > 0) {
+            ctx.save();
+            const glowGrade = ctx.createLinearGradient(catX, ty, anoX, ty);
+            
+            if (p > 10.0) {
+              // Sparks
+              ctx.strokeStyle = state.color;
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              let curX = catX;
+              let curY = ty + tubeH/2;
+              ctx.moveTo(curX, curY);
+              while (curX < anoX) {
+                curX += Math.random() * 40 + 10;
+                curY += (Math.random() - 0.5) * 40;
+                ctx.lineTo(curX, curY);
+              }
+              ctx.stroke();
+            } else if (p > 1.0 && p <= 10.0) {
+              // Positive Column glow
+              glowGrade.addColorStop(0, 'rgba(0,0,0,0)');
+              glowGrade.addColorStop(0.2, 'rgba(179,157,219,0.1)');
+              glowGrade.addColorStop(0.5, 'rgba(179,157,219,0.7)');
+              glowGrade.addColorStop(1, 'rgba(179,157,219,0.2)');
+              ctx.fillStyle = glowGrade;
+              ctx.fillRect(catX, ty + 5, anoX - catX, tubeH - 10);
+            } else if (p > 0.01 && p <= 1.0) {
+              // Striations / Faraday dark space
+              for (let i = 0; i < 8; i++) {
+                const stripX = catX + (anoX - catX) * (i / 8);
+                ctx.fillStyle = `rgba(128,222,234, ${0.1 + Math.sin(Date.now() * 0.005 + i) * 0.3})`;
+                ctx.fillRect(stripX, ty + 5, (anoX - catX)/16, tubeH - 10);
+              }
+            } else if (p <= 0.01) {
+              // Cathode Rays forming, striking glass behind anode
+              const rayIntensity = (v / 10.0);
+              ctx.fillStyle = `rgba(166,227,161, ${rayIntensity * 0.15})`;
+              ctx.fillRect(catX, ty + 10, anoX - catX, tubeH - 20);
+
+              // Glass glow (Phosphorescence behind anode)
+              ctx.shadowBlur = 20;
+              ctx.shadowColor = THEME.accent3;
+              ctx.fillStyle = `rgba(166,227,161, ${rayIntensity * 0.7})`;
+              ctx.beginPath();
+              ctx.arc(anoX + 25, ty + tubeH/2, 40, -Math.PI/2, Math.PI/2);
+              ctx.fill();
+              ctx.shadowBlur = 0; // reset
+            }
+            ctx.restore();
+          }
+
+          // Glass envelope drawing
+          ctx.strokeStyle = THEME.text;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.roundRect(tx, ty, tubeW, tubeH, 20);
+          ctx.stroke();
+
+          animationFrameId = requestAnimationFrame(draw);
+        }
+
+        draw();
+
+        this.destroy = () => {
+          cancelAnimationFrame(animationFrameId);
+        };
+      }
+    };
+
+
+    /* ==========================================================
+       STEP 2 VISUALIZATION: p5.js Microscopic Ionization / Field
+       ========================================================== */
+    let p5Instance2 = null;
+
+    stepObjects['step-2'] = {
+      init: function() {
+        const host = document.getElementById('canvas-host-2');
+        host.innerHTML = ''; // clear
+
+        let eqIndex = 0;
+        const equations = [
+          { formula: `W = \\int F \\, dx = q V`, label: "Work done on a charge $q$ accelerated through voltage $V$ is transformed completely into Kinetic Energy." },
+          { formula: `q V = \\frac{1}{2} m v^2`, label: "Kinetic Energy equation set equal to electrical work. Here $q = e$ (charge of electron) and $m$ is electron mass." },
+          { formula: `v = \\sqrt{\\frac{2qV}{m}}`, label: "Solving for velocity $v$. Because electron mass $m$ is incredibly small, velocity approaches relativistic speeds." }
+        ];
+
+        const eqEl = document.getElementById('eq-s2');
+        const eqLabel = document.getElementById('eq-explanation-2');
+        const prevBtn = document.getElementById('btn-eq-prev-2');
+        const nextBtn = document.getElementById('btn-eq-next-2');
+        const ind = document.getElementById('eq-indicator-2');
+
+        function updateEq() {
+          safeRenderKatex(equations[eqIndex].formula, eqEl);
+          eqLabel.innerHTML = equations[eqIndex].label;
+          safeAutoRender(eqLabel);
+          ind.textContent = `${eqIndex + 1} / ${equations.length}`;
+          prevBtn.disabled = eqIndex === 0;
+          nextBtn.disabled = eqIndex === equations.length - 1;
+        }
+
+        prevBtn.onclick = () => { if (eqIndex > 0) { eqIndex--; updateEq(); } };
+        nextBtn.onclick = () => { if (eqIndex < equations.length - 1) { eqIndex++; updateEq(); } };
+        
+        // Setup initial keyboard handler inside step
+        const eqKeyHandler = (e) => {
+          if (!e.shiftKey) {
+            if (e.key === 'ArrowRight' && eqIndex < equations.length - 1) { eqIndex++; updateEq(); }
+            if (e.key === 'ArrowLeft' && eqIndex > 0) { eqIndex--; updateEq(); }
+          }
+        };
+        window.addEventListener('keydown', eqKeyHandler);
+        this.destroyKeys = () => window.removeEventListener('keydown', eqKeyHandler);
+
+        updateEq();
+
+        // Instantiate p5
+        const sketch = (p) => {
+          let ions = [];
+          let electrons = [];
+          let gasAtoms = [];
+          let numGas = 40;
+          let ionCount = 0;
+
+          p.setup = () => {
+            p.createCanvas(host.clientWidth, host.clientHeight);
+            p.frameRate(60);
+            
+            // Populate neutral gas
+            for(let i=0; i<numGas; i++) {
+              gasAtoms.push({
+                x: p.random(p.width * 0.25, p.width * 0.8),
+                y: p.random(p.height * 0.2, p.height * 0.8),
+                vx: p.random(-0.5, 0.5),
+                vy: p.random(-0.5, 0.5)
+              });
+            }
+
+            // Start with a few seed positive ions
+            for(let i=0; i<5; i++) {
+              spawnIon(p.random(p.width * 0.5, p.width * 0.8), p.random(p.height * 0.2, p.height * 0.8));
+            }
+          };
+
+          function spawnIon(x, y) {
+            ions.push({ x: x, y: y, vx: 0, vy: p.random(-0.2, 0.2) });
+          }
+
+          p.draw = () => {
+            p.background(20, 20, 30);
+
+            // Draw schematic Electrodes
+            p.strokeWeight(1);
+            p.noStroke();
+            // Cathode (-)
+            p.fill('#f5c2e7');
+            p.rect(p.width * 0.15, p.height * 0.1, 15, p.height * 0.8, 4);
+            p.fill('#1e1e2e');
+            p.textSize(12);
+            p.textAlign(p.CENTER, p.CENTER);
+            p.push();
+            p.translate(p.width * 0.15 + 7, p.height * 0.5);
+            p.rotate(-p.HALF_PI);
+            p.fill('#cdd6f4');
+            p.text("CATHODE (-)", 0, 0);
+            p.pop();
+
+            // Anode (+)
+            p.fill('#89b4fa');
+            p.rect(p.width * 0.85, p.height * 0.1, 15, p.height * 0.8, 4);
+            p.push();
+            p.translate(p.width * 0.85 + 7, p.height * 0.5);
+            p.rotate(p.HALF_PI);
+            p.fill('#cdd6f4');
+            p.text("ANODE (+)", 0, 0);
+            p.pop();
+
+            // Update & Draw Gas Atoms
+            p.fill(108, 112, 134, 150);
+            p.noStroke();
+            gasAtoms.forEach(atom => {
+              atom.x += atom.vx;
+              atom.y += atom.vy;
+              // boundaries
+              if (atom.x < p.width * 0.18 || atom.x > p.width * 0.82) atom.vx *= -1;
+              if (atom.y < p.height * 0.12 || atom.y > p.height * 0.88) atom.vy *= -1;
+              p.ellipse(atom.x, atom.y, 14, 14);
+            });
+
+            // Update & Draw Positive Ions (drift leftwards)
+            p.fill('#89b4fa');
+            p.stroke('#1e1e2e');
+            for(let i = ions.length - 1; i >= 0; i--) {
+              let ion = ions[i];
+              ion.vx -= 0.15; // Electric field acceleration left
+              ion.x += ion.vx;
+              ion.y += ion.vy;
+
+              p.ellipse(ion.x, ion.y, 16, 16);
+              p.fill(20, 20, 30);
+              p.textAlign(p.CENTER, p.CENTER);
+              p.textSize(10);
+              p.text("+", ion.x, ion.y);
+              p.fill('#89b4fa');
+
+              // Crash into Cathode -> Create Electron
+              if (ion.x < p.width * 0.15 + 15) {
+                // Secondary emission
+                electrons.push({
+                  x: p.width * 0.15 + 20,
+                  y: ion.y,
+                  vx: 2, // starts with initial eject velocity
+                  vy: p.random(-0.5, 0.5)
+                });
+                ionCount++;
+                document.getElementById('hud-ion-count').textContent = `Secondary Electrons: ${ionCount}`;
+                ions.splice(i, 1);
+                // Respawn neutral gas atom to keep equilibrium density
+                gasAtoms.push({
+                  x: p.random(p.width * 0.4, p.width * 0.8),
+                  y: p.random(p.height * 0.2, p.height * 0.8),
+                  vx: p.random(-0.5, 0.5),
+                  vy: p.random(-0.5, 0.5)
+                });
+              }
+            }
+
+            // Update & Draw Electrons (accelerate rightwards violently)
+            p.fill('#a6e3a1');
+            p.noStroke();
+            for(let e = electrons.length - 1; e >= 0; e--) {
+              let elec = electrons[e];
+              elec.vx += 0.8; // High acceleration
+              elec.x += elec.vx;
+              elec.y += elec.vy;
+
+              p.ellipse(elec.x, elec.y, 6, 6);
+
+              // Check collision with Neutral Gas Atoms -> Ionization event!
+              for(let g = 0; g < gasAtoms.length; g++) {
+                let atom = gasAtoms[g];
+                let d = p.dist(elec.x, elec.y, atom.x, atom.y);
+                if (d < 12) {
+                  // Collision produces positive ion + another electron
+                  spawnIon(atom.x, atom.y);
+                  electrons.push({
+                    x: atom.x + 5,
+                    y: atom.y + p.random(-5, 5),
+                    vx: elec.vx * 0.5,
+                    vy: p.random(-1, 1)
+                  });
+                  // Glow event particle
+                  p.fill('#f9e2af');
+                  p.ellipse(atom.x, atom.y, 30, 30);
+                  // Remove ionized gas atom
+                  gasAtoms.splice(g, 1);
+                  break;
+                }
+              }
+
+              // Reached glass wall / Anode boundary
+              if (elec.x > p.width * 0.85) {
+                // Glow at glass screen
+                p.fill('#a6e3a1');
+                p.ellipse(p.width * 0.85 + 5, elec.y, 15, 15);
+                electrons.splice(e, 1);
+              }
+            }
+
+            // Maintain basic seed ions so simulation never stalls
+            if (ions.length === 0 && p.frameCount % 60 === 0) {
+              spawnIon(p.random(p.width * 0.4, p.width * 0.8), p.random(p.height * 0.2, p.height * 0.8));
+            }
+          };
+
+          p.windowResized = () => {
+            p.resizeCanvas(host.clientWidth, host.clientHeight);
+          };
+        };
+
+        p5Instance2 = new p5(sketch, host);
+        this.resize = () => {
+          if (p5Instance2) p5Instance2.windowResized();
+        };
+      },
+      destroy: function() {
+        if (p5Instance2) {
+          p5Instance2.remove();
+          p5Instance2 = null;
+        }
+        if (this.destroyKeys) this.destroyKeys();
+      }
+    };
+
+
+    /* ==========================================================
+       STEP 3 VISUALIZATION: Three.js Maltese Cross Shadow Casting
+       ========================================================== */
+    let renderer3 = null, scene3 = null, camera3 = null, controls3 = null;
+    let crossMesh = null;
+    let isCrossUp = true;
+
+    stepObjects['step-3'] = {
+      init: function() {
+        const host = document.getElementById('canvas-host-3');
+        host.innerHTML = ''; // clear
+
+        // Standard setup
+        const w = host.clientWidth;
+        const h = host.clientHeight;
+
+        scene3 = new THREE.Scene();
+        scene3.background = new THREE.Color(THEME.bg);
+
+        camera3 = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+        camera3.position.set(5, 3, 6);
+
+        renderer3 = new THREE.WebGLRenderer({ antialias: true });
+        renderer3.setSize(w, h);
+        renderer3.shadowMap.enabled = true;
+        renderer3.shadowMap.type = THREE.PCFSoftShadowMap;
+        host.appendChild(renderer3.domElement);
+
+        controls3 = new THREE.OrbitControls(camera3, renderer3.domElement);
+        controls3.enableDamping = true;
+        controls3.dampingFactor = 0.05;
+
+        // Glass Envelope cylinder
+        const glassGeo = new THREE.CylinderGeometry(1.2, 1.2, 5, 32, 1, true);
+        const glassMat = new THREE.MeshPhysicalMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.15,
+          roughness: 0.1,
+          transmission: 0.9,
+          thickness: 0.5,
+          side: THREE.DoubleSide
+        });
+        const glassTube = new THREE.Mesh(glassGeo, glassMat);
+        glassTube.rotation.z = Math.PI / 2;
+        scene3.add(glassTube);
+
+        // Cathode disc (-) on Left
+        const plateGeo = new THREE.CylinderGeometry(1.0, 1.0, 0.1, 32);
+        const cathodeMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+        const cathode = new THREE.Mesh(plateGeo, cathodeMat);
+        cathode.rotation.z = Math.PI / 2;
+        cathode.position.set(-2.4, 0, 0);
+        scene3.add(cathode);
+
+        // Anode pin / ground configuration
+        const anodeGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.8, 16);
+        const anode = new THREE.Mesh(anodeGeo, cathodeMat);
+        anode.position.set(2.0, -0.8, 0);
+        scene3.add(anode);
+
+        // Green Phosphor Screen at the Right End
+        const screenGeo = new THREE.SphereGeometry(1.2, 32, 16, 0, Math.PI*2, 0, Math.PI/2);
+        const screenMat = new THREE.MeshStandardMaterial({
+          color: 0xa6e3a1,
+          roughness: 0.8,
+          side: THREE.DoubleSide
+        });
+        const screen = new THREE.Mesh(screenGeo, screenMat);
+        screen.rotation.z = -Math.PI / 2;
+        screen.position.set(2.4, 0, 0);
+        screen.receiveShadow = true;
+        scene3.add(screen);
+
+        // Maltese Cross geometry construction (Group of intersecting tapered boxes)
+        const crossGroup = new THREE.Group();
+        const armMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+        
+        // Vertical and Horizontal Bars stylized like Maltese flared arms
+        const armH1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.2, 0.08), armMat);
+        const armH2 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.2, 0.08), armMat);
+        crossGroup.add(armH1, armH2);
+        crossGroup.position.set(0, 0, 0);
+        crossGroup.castShadow = true;
+        // Apply castShadow recursively
+        crossGroup.traverse(child => { if(child.isMesh) child.castShadow = true; });
+
+        scene3.add(crossGroup);
+        crossMesh = crossGroup;
+
+        // Electron Point Light situated precisely at Cathode center, shooting to the right
+        const pointLight = new THREE.PointLight(0xa6e3a1, 1.5, 10);
+        pointLight.position.set(-2.3, 0, 0);
+        pointLight.castShadow = true;
+        pointLight.shadow.mapSize.width = 1024;
+        pointLight.shadow.mapSize.height = 1024;
+        pointLight.shadow.camera.near = 0.1;
+        pointLight.shadow.camera.far = 8;
+        scene3.add(pointLight);
+
+        // Low ambient fill so non-shadow zones aren't absolute pitch black
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
+        scene3.add(ambientLight);
+
+        // Wire guides
+        const wireGeo = new THREE.CylinderGeometry(0.02, 0.02, 1, 8);
+        const wire = new THREE.Mesh(wireGeo, cathodeMat);
+        wire.position.set(0, -0.9, 0);
+        scene3.add(wire);
+
+        // Toggle button action
+        isCrossUp = true;
+        const toggleBtn = document.getElementById('btn-toggle-cross');
+        toggleBtn.onclick = () => {
+          isCrossUp = !isCrossUp;
+          gsap.to(crossMesh.position, {
+            y: isCrossUp ? 0 : -1.8,
+            duration: 1,
+            ease: "power2.inOut"
+          });
+          gsap.to(crossMesh.rotation, {
+            x: isCrossUp ? 0 : -Math.PI/3,
+            duration: 1,
+            ease: "power2.inOut"
+          });
+        };
+
+        // Animation Loop
+        let active = true;
+        function animate() {
+          if (!active) return;
+          requestAnimationFrame(animate);
+          controls3.update();
+          renderer3.render(scene3, camera3);
+        }
+        animate();
+
+        this.resize = () => {
+          const wNew = host.clientWidth;
+          const hNew = host.clientHeight;
+          camera3.aspect = wNew / hNew;
+          camera3.updateProjectionMatrix();
+          renderer3.setSize(wNew, hNew);
+        };
+
+        this.destroy = () => {
+          active = false;
+          controls3.dispose();
+          renderer3.dispose();
+          host.innerHTML = '';
+        };
+      }
+    };
+
+
+    /* ==========================================================
+       STEP 4 VISUALIZATION: Deflection (Electric & Magnetic Fields)
+       ========================================================== */
+    let p5Instance4 = null;
+
+    stepObjects['step-4'] = {
+      init: function() {
+        const host = document.getElementById('canvas-host-4');
+        host.innerHTML = ''; // clear
+
+        let eqIndex = 0;
+        const equations = [
+          { formula: `\\vec{F} = q(\\vec{E} + \\vec{v} \\times \\vec{B})`, label: "The total <strong>Lorentz Force</strong> acting on electrons moving through coupled electric and magnetic fields." },
+          { formula: `F_y = q E_y - q v_x B_z`, label: "Resolving vertical force component. When electric plate force and magnetic deflection force balance perfectly, vertical deviation is eliminated." },
+          { formula: `v = \\frac{E}{B}`, label: "The <strong>Velocity Selector</strong> condition. Thomson used this ratio to pinpoint velocity, allowing exact computation of mass ratios ($e/m$)." }
+        ];
+
+        const eqEl = document.getElementById('eq-s4');
+        const eqLabel = document.getElementById('eq-explanation-4');
+        const prevBtn = document.getElementById('btn-eq-prev-4');
+        const nextBtn = document.getElementById('btn-eq-next-4');
+        const ind = document.getElementById('eq-indicator-4');
+
+        function updateEq() {
+          safeRenderKatex(equations[eqIndex].formula, eqEl);
+          eqLabel.innerHTML = equations[eqIndex].label;
+          safeAutoRender(eqLabel);
+          ind.textContent = `${eqIndex + 1} / ${equations.length}`;
+          prevBtn.disabled = eqIndex === 0;
+          nextBtn.disabled = eqIndex === equations.length - 1;
+        }
+
+        prevBtn.onclick = () => { if (eqIndex > 0) { eqIndex--; updateEq(); } };
+        nextBtn.onclick = () => { if (eqIndex < equations.length - 1) { eqIndex++; updateEq(); } };
+
+        const eqKeyHandler4 = (e) => {
+          if (!e.shiftKey) {
+            if (e.key === 'ArrowRight' && eqIndex < equations.length - 1) { eqIndex++; updateEq(); }
+            if (e.key === 'ArrowLeft' && eqIndex > 0) { eqIndex--; updateEq(); }
+          }
+        };
+        window.addEventListener('keydown', eqKeyHandler4);
+        this.destroyKeys = () => window.removeEventListener('keydown', eqKeyHandler4);
+
+        updateEq();
+
+        const slideE = document.getElementById('slide-e');
+        const slideB = document.getElementById('slide-b');
+        const valE = document.getElementById('val-e');
+        const valB = document.getElementById('val-b');
+
+        // Instantiate p5
+        const sketch = (p) => {
+          let particles = [];
+          const numParticles = 120;
+
+          p.setup = () => {
+            p.createCanvas(host.clientWidth, host.clientHeight);
+            for (let i = 0; i < numParticles; i++) {
+              particles.push({
+                x: p.random(-200, 0),
+                y: 0,
+                active: true
+              });
+            }
+          };
+
+          p.draw = () => {
+            p.background(20, 20, 30);
+
+            const E = parseFloat(slideE.value);
+            const B = parseFloat(slideB.value);
+
+            valE.textContent = `${(E * 100).toFixed(0)} V/m`;
+            valB.textContent = `${(B * 0.05).toFixed(3)} T`;
+
+            // Display live dynamic HUD values
+            document.getElementById('hud-e-force').innerHTML = `E-Force: ${(E * 0.5).toFixed(2)} pN`;
+            document.getElementById('hud-b-force').innerHTML = `B-Force: ${(-B * 0.7).toFixed(2)} pN`;
+
+            // Drawing Electric Plates
+            p.strokeWeight(1);
+            p.noStroke();
+            // Top Plate
+            p.fill(E > 0 ? '#f5c2e7' : (E < 0 ? '#89b4fa' : '#45475a'));
+            p.rect(p.width * 0.35, p.height * 0.22, p.width * 0.3, 10, 3);
+            p.fill('#cdd6f4');
+            p.textSize(10);
+            p.textAlign(p.CENTER, p.BOTTOM);
+            p.text(E > 0 ? "[ + ]" : (E < 0 ? "[ - ]" : "[ ]"), p.width * 0.5, p.height * 0.2);
+
+            // Bottom Plate
+            p.fill(E > 0 ? '#89b4fa' : (E < 0 ? '#f5c2e7' : '#45475a'));
+            p.rect(p.width * 0.35, p.height * 0.72, p.width * 0.3, 10, 3);
+            p.textAlign(p.CENTER, p.TOP);
+            p.text(E > 0 ? "[ - ]" : (E < 0 ? "[ + ]" : "[ ]"), p.width * 0.5, p.height * 0.78);
+
+            // Magnetic Pole Overlay visualization (Translucent colored area representing B-Field)
+            if (Math.abs(B) > 0.1) {
+              p.fill(B > 0 ? 'rgba(249, 226, 175, 0.08)' : 'rgba(245, 194, 231, 0.08)');
+              p.stroke(B > 0 ? '#f9e2af' : '#f5c2e7');
+              p.strokeWeight(1);
+              p.drawingContext.setLineDash([4, 4]);
+              p.rect(p.width * 0.4, p.height * 0.3, p.width * 0.2, p.height * 0.4, 8);
+              p.drawingContext.setLineDash([]); // Reset
+              
+              p.noStroke();
+              p.fill(B > 0 ? '#f9e2af' : '#f5c2e7');
+              p.textAlign(p.CENTER, p.CENTER);
+              p.text(B > 0 ? "B-FIELD OUT (⊙)" : "B-FIELD IN (⊗)", p.width * 0.5, p.height * 0.5);
+            }
+
+            // Draw tube schematic
+            p.noFill();
+            p.stroke('#6c7086');
+            p.strokeWeight(2);
+            p.rect(p.width * 0.1, p.height * 0.3, p.width * 0.8, p.height * 0.4, 20);
+
+            // Cathode & Anode inside deflection tube
+            p.fill('#bac2de');
+            p.noStroke();
+            p.rect(p.width * 0.12, p.height * 0.4, 10, p.height * 0.2);
+
+            // Core Electron Ray Stream integration
+            particles.forEach(pt => {
+              pt.x += 4.5; // continuous drift
+
+              // Apply dynamic field deflection inside plate domain
+              const plateStart = p.width * 0.35;
+              const plateEnd = p.width * 0.65;
+              
+              if (pt.x > plateStart && pt.x < plateEnd) {
+                // Fy = E_force + B_force (Opposing directions mapping)
+                const acceleration = (E * 0.08) - (B * 0.12);
+                pt.y += acceleration;
+              }
+
+              // Draw particle
+              const px = pt.x;
+              const py = p.height * 0.5 + pt.y;
+
+              // Constrain drawing within glass boundary limit
+              if (py > p.height * 0.31 && py < p.height * 0.69 && px < p.width * 0.88) {
+                p.fill('#a6e3a1');
+                p.ellipse(px, py, 5, 5);
+              } else {
+                pt.active = false;
+              }
+
+              // Recycle particle
+              if (pt.x > p.width * 0.9 || !pt.active) {
+                pt.x = p.random(-50, 0);
+                pt.y = 0;
+                pt.active = true;
+              }
+            });
+          };
+
+          p.windowResized = () => {
+            p.resizeCanvas(host.clientWidth, host.clientHeight);
+          };
+        };
+
+        p5Instance4 = new p5(sketch, host);
+        this.resize = () => {
+          if (p5Instance4) p5Instance4.windowResized();
+        };
+      },
+      destroy: function() {
+        if (p5Instance4) {
+          p5Instance4.remove();
+          p5Instance4 = null;
+        }
+        if (this.destroyKeys) this.destroyKeys();
+      }
+    };
+
+
+    // Bootstrapping
+    document.addEventListener("DOMContentLoaded", () => {
+      initStepManager();
+    });
+  </script>
+</body>
+</html>

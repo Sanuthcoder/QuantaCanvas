@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" class="response-document">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Visualization — QuantaCanvas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Asimovian&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<link rel="icon" href="/favicon.ico" type="image/x-icon" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<script>if (localStorage.getItem("qc-theme") === "light") document.documentElement.classList.add("light");</script>
+</head>
+<body class="tool-page tool-response-page">
+<header class="site-header">
+  <nav class="nav">
+    <a class="brand" href="index.html">
+      <span class="brand-mark"><img src="assets/logo.png" alt="QuantaCanvas"></span>
+      <span class="brand-word" style="font-family: 'Asimovian', sans-serif; font-size: 24px; font-weight: 700;">Quanta<span class="c">Canvas</span></span>
+    </a>
+    <div class="nav-menu" id="navMenu">
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="examples.html">Examples</a></li>
+      </ul>
+      <button class="more-btn" id="moreBtn" aria-label="More menu" aria-expanded="false" type="button">...</button>
+      <ul class="more-menu" id="moreMenu"></ul>
+    </div>
+    <div class="nav-right">
+      <button class="icon-btn" data-theme-toggle type="button">☀</button>
+      <a class="btn" href="tool.html">Try it</a>
+    </div>
+  </nav>
+</header>
+
+<main class="tool-response-content">
+  <div class="tool-response-workspace">
+    <div class="tool-iframe-container" id="iframe-container"></div>
+    <aside class="tool-clarifications-sidebar">
+      <div class="tool-response-sidebar-head">
+        <h1 class="tool-clarifications-heading">Clarifications</h1>
+        <button class="tool-new-topic-btn" id="newTopic" type="button">New Topic</button>
+      </div>
+      <div class="tool-chats-container" id="chats" aria-live="polite"></div>
+      <form class="tool-chat-input-wrapper" id="chatForm">
+        <textarea class="tool-chat-input" id="chatInput" rows="1" autocomplete="off" placeholder="Ask a follow-up..." aria-label="Ask a follow-up question"></textarea>
+        <button class="tool-chat-send-btn" id="sendChat" type="submit" aria-label="Send follow-up">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.5 21 12 3 3.5v6.6l12.9 1.9L3 13.9v6.6Z"/></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p>QuantaCanvas — visualize the concepts that text can't explain.</p>
+    <div class="footer-links">
+      <a href="about.html">About</a>
+      <a href="examples.html">Examples</a>
+      <a href="tool.html">Tool</a>
+    </div>
+  </div>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="js/main.js"></script>
+<script src="js/responses.js"></script>
+</body>
+</html>
