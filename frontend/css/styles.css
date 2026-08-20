@@ -1835,7 +1835,7 @@ body.tool-page .site-footer {
 /* Short/landscape screens: give the visualization nearly everything. */
 @media (max-height: 720px) {
   .vor-page {
-    --vor-chrome: 70px;
+    --vor-chrome: 70vw;
   }
 }
 
