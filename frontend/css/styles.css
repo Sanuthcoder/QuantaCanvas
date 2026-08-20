@@ -760,7 +760,7 @@ a {
 }
 .thumb .preview {
   position: relative;
-  height: 168px;
+  height: 250px;
 }
 .thumb .preview .glow-bar {
   position: absolute;
@@ -1841,7 +1841,7 @@ body.tool-page .site-footer {
 
 .preview {
     position: relative;
-    height: 250px;
+    height: 160px;
     overflow: hidden;
 }
 
