@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Volume of Revolution Visualized</title>
+  
+  <!-- GSAP for animations -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  
+  <!-- Three.js and OrbitControls for 3D visualization -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- KaTeX for beautiful math equations -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --panel: #313244;
+      --text: #cdd6f4;
+      --muted: #6c7086;
+      --grid: #45475a;
+      --axis: #bac2de;
+      --accent1: #89b4fa; /* blue */
+      --accent2: #f5c2e7; /* pink */
+      --accent3: #a6e3a1; /* green */
+      --hover: #f9e2af; /* yellow */
+      --visual-w: 55%;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      flex: 0 0 auto;
+      background: var(--panel);
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid var(--grid);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent1);
+    }
+
+    header .subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .stage {
+      flex: 1 1 0;
+      min-height: 0;
+      min-width: 0;
+      display: grid;
+      grid-template-columns: var(--visual-w) 6px minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+      overflow: hidden;
+    }
+
+    .visual-pane {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: #11111b;
+    }
+
+    #three-canvas-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #labels-container {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 5;
+    }
+
+    .axis-label {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      font-size: 0.75rem;
+      font-family: monospace;
+      color: var(--axis);
+      text-shadow: 0 0 4px rgba(0,0,0,0.8);
+      pointer-events: none;
+    }
+
+    .divider {
+      grid-column: 2;
+      cursor: col-resize;
+      background: var(--grid);
+      position: relative;
+      z-index: 15;
+      transition: background 0.2s;
+    }
+
+    .divider:hover, .divider.dragging {
+      background: var(--hover);
+    }
+
+    .divider::after {
+      content: '';
+      position: absolute;
+      left: 2px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--muted);
+      opacity: 0.5;
+    }
+
+    .content-pane {
+      grid-column: 3;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      background: var(--panel);
+      overflow-y: auto;
+      min-width: 0;
+      min-height: 0;
+      border-left: 1px solid var(--grid);
+    }
+
+    .step-card {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      justify-content: space-between;
+    }
+
+    .step-card.active {
+      display: flex;
+    }
+
+    .step-header h2 {
+      font-size: 1.5rem;
+      color: var(--accent1);
+      margin-bottom: 0.5rem;
+    }
+
+    .step-description {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+    }
+
+    .interactive-control-box {
+      background: rgba(30, 30, 46, 0.4);
+      border: 1px solid var(--grid);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .control-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+      display: block;
+      font-weight: 600;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-option {
+      flex: 1;
+      background: var(--panel);
+      border: 1px solid var(--grid);
+      color: var(--text);
+      padding: 0.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    .btn-option:hover {
+      border-color: var(--accent1);
+      background: rgba(137, 180, 250, 0.1);
+    }
+
+    .btn-option.active {
+      background: var(--accent1);
+      color: var(--bg);
+      border-color: var(--accent1);
+      font-weight: bold;
+    }
+
+    .slider-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent1);
+      cursor: pointer;
+    }
+
+    .slider-val {
+      font-family: monospace;
+      font-size: 0.9rem;
+      min-width: 3rem;
+      text-align: right;
+    }
+
+    .eq-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid var(--grid);
+      padding-bottom: 0.25rem;
+    }
+
+    .eq-panel-header h3 {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+    }
+
+    .eq-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0.75rem 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent1) transparent;
+      background: rgba(17, 17, 27, 0.3);
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100px;
+    }
+
+    .eq-state {
+      display: inline-block;
+      white-space: nowrap;
+      min-width: max-content;
+      font-size: clamp(1rem, 1.8vw, 1.5rem);
+      transition: opacity 0.3s ease;
+    }
+
+    .eq-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 0.25rem;
+    }
+
+    .btn-sub {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--grid);
+      color: var(--text);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+
+    .btn-sub:hover:not(:disabled) {
+      background: var(--accent1);
+      color: var(--bg);
+      border-color: var(--accent1);
+    }
+
+    .btn-sub:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    #eq-progress {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-family: monospace;
+    }
+
+    footer {
+      flex: 0 0 auto;
+      background: var(--panel);
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--grid);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+    }
+
+    .nav-btn {
+      background: var(--panel);
+      border: 1px solid var(--accent1);
+      color: var(--accent1);
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      background: var(--accent1);
+      color: var(--bg);
+    }
+
+    .nav-btn:disabled {
+      border-color: var(--grid);
+      color: var(--muted);
+      cursor: not-allowed;
+    }
+
+    .lesson-progress {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .progress-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--grid);
+      transition: background 0.3s;
+    }
+
+    .progress-dot.active {
+      background: var(--accent1);
+    }
+
+    /* Helper styling classes for animations */
+    .highlight-new { color: var(--hover) !important; }
+    .highlight-cancel { color: var(--accent2) !important; text-decoration: line-through; opacity: 0.6; }
+    .highlight-final { color: var(--accent3) !important; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <header>
+      <div>
+        <h1>Volumes of Revolution</h1>
+        <div class="subtitle">Visualizing the Disk Method</div>
+      </div>
+      <div style="font-size: 0.8rem; color: var(--muted); font-family: monospace;">Drag 3D view to rotate • Scroll to zoom</div>
+    </header>
+
+    <div class="stage" id="main-stage">
+      <!-- Visualizer Left Pane -->
+      <div class="visual-pane">
+        <div id="three-canvas-container"></div>
+        <div id="labels-container"></div>
+      </div>
+
+      <!-- Drag Divider -->
+      <div class="divider" id="drag-divider" role="separator" aria-orientation="vertical"></div>
+
+      <!-- Right Content Pane -->
+      <div class="content-pane">
+        
+        <!-- STEP 1: The Bounded Region -->
+        <div class="step-card active" id="step-card-0">
+          <div class="step-header">
+            <h2>1. The Bounded 2D Region</h2>
+            <div class="step-description">
+              Before revolving, we start with a standard 2D area under a curve. Let's look at the function $f(x) = \sqrt{x}$ on the interval $[0, 4]$.
+              <br><br>
+              The area bounded by this curve, the $x$-axis, and the vertical line $x = 4$ forms a flat shape ready to be swept into three dimensions.
+            </div>
+          </div>
+          <div>
+            <div class="eq-panel-header">
+              <h3>Target Region</h3>
+            </div>
+            <div class="eq-wrap">
+              <div class="eq-state" id="eq-s1">$$y = \sqrt{x}, \quad x \in [0, 4]$$</div>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--muted); text-align: center;">
+              Use the navigation bar below to continue.
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: The Swept Slice (Disk Concept) -->
+        <div class="step-card" id="step-card-1">
+          <div class="step-header">
+            <h2>2. Revolving a Single Slice</h2>
+            <div class="step-description">
+              Imagine taking a tiny, thin vertical rectangle under the curve at some coordinate $x$. Its width is a microscopic slice, $dx$, and its height is the value of the function, $f(x)$.
+              <br><br>
+              When we rotate this single rectangle $360^\circ$ around the $x$-axis, it sweeps out a thin 3D cylinder (a **disk**).
+            </div>
+          </div>
+          
+          <div class="interactive-control-box">
+            <span class="control-label">Revolve the Strip</span>
+            <div class="slider-container">
+              <div class="slider-row">
+                <input type="range" id="step2-revolve-slider" min="0" max="360" value="0">
+                <span class="slider-val" id="step2-revolve-val">0°</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="eq-panel-header">
+              <h3>Volume of One Disk ($dV$)</h3>
+            </div>
+            <div class="eq-wrap">
+              <div class="eq-state" id="eq-s2">$$dV = \pi \cdot [r(x)]^2 \cdot dx = \pi \cdot [f(x)]^2 \, dx$$</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 3: Riemann Sum (Discrete Disks) -->
+        <div class="step-card" id="step-card-2">
+          <div class="step-header">
+            <h2>3. Approximating with $N$ Disks</h2>
+            <div class="step-description">
+              We can approximate the entire solid's volume by filling it with multiple adjacent disks. 
+              <br><br>
+              Adjust the count of slices below. Notice that as the number of slices $N$ increases, the blocky approximation begins to match the true curved shape of the continuous solid.
+            </div>
+          </div>
+
+          <div class="interactive-control-box">
+            <span class="control-label">Number of Slices ($N$)</span>
+            <div class="btn-group" id="riemann-btns">
+              <button class="btn-option active" data-val="6">6</button>
+              <button class="btn-option" data-val="12">12</button>
+              <button class="btn-option" data-val="24">24</button>
+              <button class="btn-option" data-val="48">48</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="eq-panel-header">
+              <h3>Riemann Approximation</h3>
+            </div>
+            <div class="eq-wrap">
+              <div class="eq-state" id="eq-s3">$$V \approx \sum_{i=1}^{N} \pi [f(x_i)]^2 \Delta x$$</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 4: Calculus (Continuous Integration) -->
+        <div class="step-card" id="step-card-3">
+          <div class="step-header">
+            <h2>4. Calculus &amp; Exact Solution</h2>
+            <div class="step-description">
+              By taking the limit as the number of slices $N \to \infty$, the slice width $dx \to 0$. The sum becomes a definite integral, calculating the exact volume of the solid.
+              <br><br>
+              Let's evaluate the exact volume of our shape revolved around the $x$-axis.
+            </div>
+          </div>
+
+          <div class="interactive-control-box">
+            <span class="control-label">Solid Cut-Away View</span>
+            <div class="slider-container">
+              <div class="slider-row">
+                <input type="range" id="step4-slice-slider" min="90" max="360" value="360">
+                <span class="slider-val" id="step4-slice-val">360°</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="eq-panel-header">
+              <h3>Integration Steps</h3>
+              <span id="eq-progress">1 / 6</span>
+            </div>
+            <div class="eq-wrap">
+              <div class="eq-state" id="eq-step4-display">$$V = \int_{a}^{b} \pi [f(x)]^2 \, dx$$</div>
+            </div>
+            <div class="eq-controls">
+              <button id="eq-prev" class="btn-sub" title="Previous math step">◀</button>
+              <button id="eq-next" class="btn-sub" title="Next math step">▶</button>
+              <button id="eq-replay" class="btn-sub" title="Reset derivation">⟲</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <footer>
+      <button class="nav-btn" id="prev-btn" disabled>◀ Previous</button>
+      <div class="lesson-progress">
+        <div class="progress-dot active"></div>
+        <div class="progress-dot"></div>
+        <div class="progress-dot"></div>
+        <div class="progress-dot"></div>
+      </div>
+      <button class="nav-btn" id="next-btn">Next ▶</button>
+    </footer>
+  </div>
+
+  <script>
+    // Injected Catppuccin Theme constants
+    const THEME = {
+      bg: '#1e1e2e',
+      panel: '#313244',
+      text: '#cdd6f4',
+      muted: '#6c7086',
+      grid: '#45475a',
+      axis: '#bac2de',
+      accent1: '#89b4fa', // blue
+      accent2: '#f5c2e7', // pink
+      accent3: '#a6e3a1', // green
+      hover: '#f9e2af'   // yellow
+    };
+
+    // Global Interactive State
+    let currentStepIndex = 0;
+    const totalSteps = 4;
+
+    // Split Layout resizable divider behavior
+    const stage = document.getElementById('main-stage');
+    const divider = document.getElementById('drag-divider');
+    let isDragging = false;
+
+    divider.addEventListener('pointerdown', (e) => {
+      isDragging = true;
+      divider.classList.add('dragging');
+      divider.setPointerCapture(e.pointerId);
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
+    });
+
+    divider.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      const stageRect = stage.getBoundingClientRect();
+      let pct = ((e.clientX - stageRect.left) / stageRect.width) * 100;
+      pct = Math.max(30, Math.min(80, pct));
+      stage.style.setProperty('--visual-w', pct + '%');
+      triggerVisualResize();
+    });
+
+    divider.addEventListener('pointerup', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      divider.classList.remove('dragging');
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      triggerVisualResize();
+    });
+
+    // Three.js Scene setup
+    const visualContainer = document.getElementById('three-canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x11111b);
+
+    const camera = new THREE.PerspectiveCamera(45, visualContainer.clientWidth / visualContainer.clientHeight, 0.1, 100);
+    camera.position.set(5.5, 4.5, 8.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(visualContainer.clientWidth, visualContainer.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    visualContainer.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxPolarAngle = Math.PI / 2 + 0.1; // Don't orbit entirely underneath
+    controls.target.set(2, 0.5, 0);
+
+    // Dynamic grid & lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight1.position.set(5, 10, 7);
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(THEME.accent1, 0.35);
+    dirLight2.position.set(-5, -2, -3);
+    scene.add(dirLight2);
+
+    // Grid coordinates helpers
+    const gridColor = new THREE.Color(THEME.grid);
+    const gridX = new THREE.GridHelper(10, 10, gridColor, gridColor);
+    gridX.position.y = -0.01;
+    gridX.position.x = 2;
+    scene.add(gridX);
+
+    // Build coordinate axes manually using LineSegments
+    const axesMaterial = new THREE.LineBasicMaterial({ color: THEME.axis, linewidth: 2 });
+    const axesPoints = [
+      new THREE.Vector3(-1, 0, 0), new THREE.Vector3(5, 0, 0), // X
+      new THREE.Vector3(0, -2, 0), new THREE.Vector3(0, 3, 0), // Y
+      new THREE.Vector3(0, 0, -2.5), new THREE.Vector3(0, 0, 2.5)  // Z
+    ];
+    const axesGeo = new THREE.BufferGeometry().setFromPoints(axesPoints);
+    const axes = new THREE.LineSegments(axesGeo, axesMaterial);
+    scene.add(axes);
+
+    // Track visual 2D projection labels
+    const labels = [];
+    const labelsContainer = document.getElementById('labels-container');
+
+    function addLabel(pos, text, cssClass = '') {
+      const el = document.createElement('div');
+      el.className = `axis-label ${cssClass}`;
+      el.textContent = text;
+      labelsContainer.appendChild(el);
+      labels.push({ pos, el });
+    }
+
+    // Set up standard tick labels
+    addLabel(new THREE.Vector3(5.2, 0, 0), 'x');
+    addLabel(new THREE.Vector3(0, 3.2, 0), 'y');
+    addLabel(new THREE.Vector3(0, 0, 2.7), 'z');
+    addLabel(new THREE.Vector3(1, -0.2, 0), '1');
+    addLabel(new THREE.Vector3(2, -0.2, 0), '2');
+    addLabel(new THREE.Vector3(3, -0.2, 0), '3');
+    addLabel(new THREE.Vector3(4, -0.2, 0), '4');
+    addLabel(new THREE.Vector3(-0.25, 1, 0), '1');
+    addLabel(new THREE.Vector3(-0.25, 2, 0), '2');
+
+    function updateLabelsPosition() {
+      const tempV = new THREE.Vector3();
+      const w = visualContainer.clientWidth;
+      const h = visualContainer.clientHeight;
+      
+      labels.forEach(l => {
+        tempV.copy(l.pos).project(camera);
+        const x = (tempV.x * 0.5 + 0.5) * w;
+        const y = (tempV.y * -0.5 + 0.5) * h;
+        l.el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+        if (tempV.z > 1 || x < 0 || x > w || y < 0 || y > h) {
+          l.el.style.opacity = 0;
+        } else {
+          l.el.style.opacity = 0.85;
+        }
+      });
+    }
+
+    // Mathematical parameters
+    const xMin = 0, xMax = 4;
+    const f = (x) => Math.sqrt(x);
+
+    // Mesh Holders for dynamically changing visual elements
+    let mainCurveLine = null;
+    let step1FillMesh = null;
+    let step2Strip = null;
+    let step2SweepDisk = null;
+    let step3RiemannGroup = new THREE.Group();
+    let step4SolidMesh = null;
+
+    scene.add(step3RiemannGroup);
+
+    // Initializations for meshes
+    function initVisualGeometries() {
+      // 1. Curve line
+      const points = [];
+      const steps = 100;
+      for (let i = 0; i <= steps; i++) {
+        const x = xMin + (xMax - xMin) * (i / steps);
+        points.push(new THREE.Vector3(x, f(x), 0));
+      }
+      const curveGeo = new THREE.BufferGeometry().setFromPoints(points);
+      const curveMat = new THREE.LineBasicMaterial({ color: THEME.accent1, linewidth: 4 });
+      mainCurveLine = new THREE.Line(curveGeo, curveMat);
+      scene.add(mainCurveLine);
+
+      // 2. Step 1: Area Fill (Shape Geometry)
+      const shapePoints = [new THREE.Vector2(xMin, 0)];
+      for (let i = 0; i <= steps; i++) {
+        const x = xMin + (xMax - xMin) * (i / steps);
+        shapePoints.push(new THREE.Vector2(x, f(x)));
+      }
+      shapePoints.push(new THREE.Vector2(xMax, 0));
+      const shape = new THREE.Shape(shapePoints);
+      const shapeGeo = new THREE.ShapeGeometry(shape);
+      const shapeMat = new THREE.MeshBasicMaterial({
+        color: THEME.accent1,
+        transparent: true,
+        opacity: 0.35,
+        side: THREE.DoubleSide
+      });
+      step1FillMesh = new THREE.Mesh(shapeGeo, shapeMat);
+      scene.add(step1FillMesh);
+
+      // 3. Step 2: Representative strip & dynamic Sweep Disk
+      // Rectangle strip
+      const stripX = 2.5;
+      const stripHeight = f(stripX);
+      const stripWidth = 0.15;
+      const stripGeo = new THREE.BoxGeometry(stripWidth, stripHeight, 0.01);
+      const stripMat = new THREE.MeshBasicMaterial({ color: THEME.accent2, transparent: true, opacity: 0.85 });
+      step2Strip = new THREE.Mesh(stripGeo, stripMat);
+      step2Strip.position.set(stripX, stripHeight / 2, 0);
+      scene.add(step2Strip);
+      step2Strip.visible = false;
+
+      // 4. Step 4: Full continuous Lathe solid of f(x) = sqrt(x)
+      const lathePoints = [];
+      for (let i = 0; i <= steps; i++) {
+        const x = xMin + (xMax - xMin) * (i / steps);
+        // Lathe rotates around Y. We map (x, f(x)) coordinates to (y, x) relative to lathe.
+        lathePoints.push(new THREE.Vector2(f(x), x));
+      }
+      const latheGeo = new THREE.LatheGeometry(lathePoints, 64, 0, Math.PI * 2);
+      const latheMat = new THREE.MeshPhongMaterial({
+        color: THEME.accent1,
+        transparent: true,
+        opacity: 0.75,
+        side: THREE.DoubleSide,
+        shininess: 80,
+        specular: 0x333333
+      });
+      step4SolidMesh = new THREE.Mesh(latheGeo, latheMat);
+      // To revolve around X-axis, rotate Lathe mesh around Z by -PI/2
+      step4SolidMesh.rotation.z = -Math.PI / 2;
+      scene.add(step4SolidMesh);
+      step4SolidMesh.visible = false;
+    }
+
+    // Trigger on first initialization
+    initVisualGeometries();
+
+    // Resize orchestration
+    function triggerVisualResize() {
+      const w = visualContainer.clientWidth;
+      const h = visualContainer.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+
+    window.addEventListener('resize', triggerVisualResize);
+
+    // Step-by-Step State Controllers
+
+    // Step 1: Draw Area under curve
+    function setupStep1() {
+      resetAllVisibles();
+      mainCurveLine.visible = true;
+      step1FillMesh.visible = true;
+
+      // Reset camera to clean perspective angle facing the XY plane
+      gsap.to(camera.position, { x: 2.5, y: 1.8, z: 6, duration: 1.5, ease: 'power2.out', onUpdate: () => controls.update() });
+      gsap.to(controls.target, { x: 2, y: 0.8, z: 0, duration: 1.5, ease: 'power2.out' });
+
+      // Build animation for shape draw
+      step1FillMesh.scale.x = 0;
+      gsap.to(step1FillMesh.scale, { x: 1, duration: 1.5, ease: 'power2.out' });
+    }
+
+    // Step 2: Individual Strip rotating
+    function setupStep2() {
+      resetAllVisibles();
+      mainCurveLine.visible = true;
+      step1FillMesh.visible = true;
+      step1FillMesh.material.opacity = 0.15; // fade background area
+      step2Strip.visible = true;
+
+      const slider = document.getElementById('step2-revolve-slider');
+      slider.value = 0;
+      document.getElementById('step2-revolve-val').textContent = '0°';
+      updateStep2Sweep(0);
+
+      gsap.to(camera.position, { x: 4.5, y: 3.5, z: 5.5, duration: 1.5, ease: 'power2.out', onUpdate: () => controls.update() });
+      gsap.to(controls.target, { x: 2.2, y: 0.5, z: 0, duration: 1.5, ease: 'power2.out' });
+    }
+
+    function updateStep2Sweep(degrees) {
+      if (step2SweepDisk) {
+        scene.remove(step2SweepDisk);
+        step2SweepDisk.geometry.dispose();
+        step2SweepDisk = null;
+      }
+
+      const rad = (degrees / 180) * Math.PI;
+      const r = f(2.5);
+      const w = 0.15;
+
+      if (rad > 0.01) {
+        // Create partial cylinder mapped along X axis
+        const cylGeo = new THREE.CylinderGeometry(r, r, w, 48, 1, false, 0, rad);
+        const cylMat = new THREE.MeshPhongMaterial({
+          color: THEME.accent2,
+          transparent: true,
+          opacity: 0.7,
+          side: THREE.DoubleSide
+        });
+        step2SweepDisk = new THREE.Mesh(cylGeo, cylMat);
+        // Align to X axis
+        step2SweepDisk.rotation.z = -Math.PI / 2;
+        // Adjust for natural circular layout starting direction
+        step2SweepDisk.rotation.x = Math.PI / 2;
+        step2SweepDisk.position.set(2.5, 0, 0);
+        scene.add(step2SweepDisk);
+      }
+    }
+
+    document.getElementById('step2-revolve-slider').addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      document.getElementById('step2-revolve-val').textContent = `${val}°`;
+      updateStep2Sweep(val);
+    });
+
+    // Step 3: Riemann Disks Approximation
+    function setupStep3() {
+      resetAllVisibles();
+      mainCurveLine.visible = true;
+      mainCurveLine.material.opacity = 0.3;
+
+      gsap.to(camera.position, { x: 5, y: 4, z: 6, duration: 1.5, ease: 'power2.out', onUpdate: () => controls.update() });
+      gsap.to(controls.target, { x: 2, y: 0.5, z: 0, duration: 1.5, ease: 'power2.out' });
+
+      // Default build with active button state
+      const activeBtn = document.querySelector('#riemann-btns .btn-option.active');
+      const val = parseInt(activeBtn.dataset.val);
+      buildRiemannDisks(val);
+    }
+
+    function buildRiemannDisks(N) {
+      // Clear current group
+      while(step3RiemannGroup.children.length > 0) {
+        const obj = step3RiemannGroup.children[0];
+        obj.geometry.dispose();
+        obj.material.dispose();
+        step3RiemannGroup.remove(obj);
+      }
+
+      const dx = (xMax - xMin) / N;
+      const diskMat = new THREE.MeshPhongMaterial({
+        color: THEME.accent1,
+        transparent: true,
+        opacity: 0.65,
+        shininess: 40
+      });
+
+      for (let i = 0; i < N; i++) {
+        // Right endpoint Riemann evaluations
+        const xEval = xMin + (i + 1) * dx;
+        const radius = f(xEval);
+        
+        // Setup cylinders mapped along X-axis
+        const cylGeo = new THREE.CylinderGeometry(radius, radius, dx, 32);
+        const cylMesh = new THREE.Mesh(cylGeo, diskMat);
+        
+        cylMesh.rotation.z = -Math.PI / 2;
+        cylMesh.position.set(xEval - dx/2, 0, 0);
+        
+        // Initial animation scale-in state
+        cylMesh.scale.set(0, 0, 0);
+        step3RiemannGroup.add(cylMesh);
+      }
+
+      // Smooth sequence scale up animation
+      step3RiemannGroup.children.forEach((mesh, index) => {
+        gsap.to(mesh.scale, {
+          x: 1, y: 1, z: 1,
+          duration: 0.6,
+          delay: index * (1.2 / N),
+          ease: 'power1.out'
+        });
+      });
+    }
+
+    document.getElementById('riemann-btns').addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-option')) {
+        document.querySelectorAll('#riemann-btns .btn-option').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        const val = parseInt(e.target.dataset.val);
+        buildRiemannDisks(val);
+      }
+    });
+
+    // Step 4: Continuous Integral and cut away slider
+    function setupStep4() {
+      resetAllVisibles();
+      step4SolidMesh.visible = true;
+
+      gsap.to(camera.position, { x: 5.5, y: 3.5, z: 5, duration: 1.5, ease: 'power2.out', onUpdate: () => controls.update() });
+      gsap.to(controls.target, { x: 2, y: 0.4, z: 0, duration: 1.5, ease: 'power2.out' });
+
+      const slider = document.getElementById('step4-slice-slider');
+      slider.value = 360;
+      document.getElementById('step4-slice-val').textContent = '360°';
+      updateContinuousSolid(360);
+      resetDerivation();
+    }
+
+    function updateContinuousSolid(degrees) {
+      if (step4SolidMesh) {
+        scene.remove(step4SolidMesh);
+        step4SolidMesh.geometry.dispose();
+      }
+
+      const rad = (degrees / 180) * Math.PI;
+      const steps = 80;
+      const lathePoints = [];
+      for (let i = 0; i <= steps; i++) {
+        const x = xMin + (xMax - xMin) * (i / steps);
+        lathePoints.push(new THREE.Vector2(f(x), x));
+      }
+
+      const latheGeo = new THREE.LatheGeometry(lathePoints, 64, 0, rad);
+      const latheMat = new THREE.MeshPhongMaterial({
+        color: THEME.accent1,
+        transparent: true,
+        opacity: 0.75,
+        side: THREE.DoubleSide,
+        shininess: 60,
+        specular: 0x222222
+      });
+
+      step4SolidMesh = new THREE.Mesh(latheGeo, latheMat);
+      step4SolidMesh.rotation.z = -Math.PI / 2;
+      scene.add(step4SolidMesh);
+    }
+
+    document.getElementById('step4-slice-slider').addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      document.getElementById('step4-slice-val').textContent = `${val}°`;
+      updateContinuousSolid(val);
+    });
+
+    // Master Reset visibility helper
+    function resetAllVisibles() {
+      if (mainCurveLine) {
+        mainCurveLine.visible = false;
+        mainCurveLine.material.opacity = 1.0;
+      }
+      if (step1FillMesh) {
+        step1FillMesh.visible = false;
+        step1FillMesh.material.opacity = 0.35;
+      }
+      if (step2Strip) step2Strip.visible = false;
+      if (step2SweepDisk) {
+        scene.remove(step2SweepDisk);
+        step2SweepDisk = null;
+      }
+      // Clear Riemann
+      while(step3RiemannGroup.children.length > 0) {
+        const obj = step3RiemannGroup.children[0];
+        obj.geometry.dispose();
+        step3RiemannGroup.remove(obj);
+      }
+      if (step4SolidMesh) step4SolidMesh.visible = false;
+    }
+
+
+    // EQUATION DERIVATION STATE ENGINE (STEP 4)
+    const derivationStates = [
+      {
+        formula: "V = \\int_{a}^{b} \\pi [f(x)]^2 \\, dx",
+        desc: "The general template for calculating volume via the Disk Method."
+      },
+      {
+        formula: "V = \\int_{0}^{4} \\pi \\left(\\sqrt{x}\\right)^2 \\, dx",
+        desc: "Substitute our bounds $a = 0$, $b = 4$, and the curve function $f(x) = \\sqrt{x}$."
+      },
+      {
+        formula: "V = \\pi \\int_{0}^{4} x \\, dx",
+        desc: "Pull the constant $\\pi$ outward, and simplify the square of the square root: $(\\sqrt{x})^2 = x$."
+      },
+      {
+        formula: "V = \\pi \\left[ \\frac{1}{2}x^2 \\right]_{0}^{4}",
+        desc: "Integrate using the Power Rule: the anti-derivative of $x$ is $\\frac{1}{2}x^2$."
+      },
+      {
+        formula: "V = \\pi \\left( \\frac{1}{2}(4)^2 - \\frac{1}{2}(0)^2 \\right)",
+        desc: "Substitute the upper bound 4 followed by subtracting the lower bound 0 evaluation."
+      },
+      {
+        formula: "V = \\pi \\left( 8 - 0 \\right) = \\textcolor{#a6e3a1}{8\\pi}",
+        desc: "Simplifying values yields the final exact volume of the 3D solid: <span class='highlight-final'>$8\\pi \\approx 25.13$</span> cubic units."
+      }
+    ];
+
+    let derivationIndex = 0;
+
+    function renderActiveDerivation() {
+      const container = document.getElementById('eq-step4-display');
+      const textContainer = document.querySelector('#step-card-3 .step-description');
+      
+      // Update math display with a smooth fade in
+      gsap.fromTo(container, { opacity: 0, y: 5 }, { opacity: 1, y: 0, duration: 0.3 });
+      
+      safeRenderKatex(derivationStates[derivationIndex].formula, container);
+      
+      // Update contextual instructions description
+      textContainer.innerHTML = `By taking the limit as the number of slices $N \\to \\infty$, the slice width $dx \\to 0$. The sum becomes a definite integral, calculating the exact volume of the solid.<br><br><b>Step Update:</b> ${derivationStates[derivationIndex].desc}`;
+      
+      // Trigger math rendering
+      safeAutoRender(textContainer);
+
+      // Buttons visual state
+      document.getElementById('eq-progress').textContent = `${derivationIndex + 1} / ${derivationStates.length}`;
+      document.getElementById('eq-prev').disabled = derivationIndex === 0;
+      document.getElementById('eq-next').disabled = derivationIndex === derivationStates.length - 1;
+    }
+
+    function resetDerivation() {
+      derivationIndex = 0;
+      renderActiveDerivation();
+    }
+
+    document.getElementById('eq-next').addEventListener('click', () => {
+      if (derivationIndex < derivationStates.length - 1) {
+        derivationIndex++;
+        renderActiveDerivation();
+      }
+    });
+
+    document.getElementById('eq-prev').addEventListener('click', () => {
+      if (derivationIndex > 0) {
+        derivationIndex--;
+        renderActiveDerivation();
+      }
+    });
+
+    document.getElementById('eq-replay').addEventListener('click', resetDerivation);
+
+
+    // Safe rendering helper for explicit elements
+    function safeRenderKatex(formula, element) {
+      const cleaned = formula
+        .replace(/^\s*\$\$?|\$\$?\s*$/g, '')
+        .replace(/^\s*\\[\(\[]|\\[\)\]]\s*$/g, '')
+        .trim();
+      const checkExist = setInterval(() => {
+        if (typeof window.katex !== 'undefined') {
+          clearInterval(checkExist);
+          try {
+            window.katex.render(cleaned, element, { throwOnError: false, displayMode: true });
+          } catch (err) { console.error(err); }
+        }
+      }, 50);
+    }
+
+    // Inline math elements renderer
+    function safeAutoRender(rootElement) {
+      const tryRender = setInterval(() => {
+        if (typeof window.renderMathInElement !== 'undefined') {
+          clearInterval(tryRender);
+          window.renderMathInElement(rootElement, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$',  right: '$',  display: false},
+              {left: '\\(', right: '\\)', display: false},
+              {left: '\\[', right: '\\]', display: true}
+            ],
+            throwOnError: false,
+            ignoredTags: ['script','noscript','style','textarea','pre','code','option']
+          });
+        }
+      }, 50);
+    }
+
+    // Top Level Navigation Logic
+    function updateActiveStep() {
+      // Manage active visible classes on side card
+      document.querySelectorAll('.step-card').forEach((card, idx) => {
+        if (idx === currentStepIndex) {
+          card.classList.add('active');
+          gsap.fromTo(card, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4 });
+          safeAutoRender(card);
+        } else {
+          card.classList.remove('active');
+        }
+      });
+
+      // Manage Footer Progress Dots
+      document.querySelectorAll('.progress-dot').forEach((dot, idx) => {
+        if (idx === currentStepIndex) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+
+      // Enable/Disable step action triggers
+      document.getElementById('prev-btn').disabled = currentStepIndex === 0;
+      document.getElementById('next-btn').disabled = currentStepIndex === totalSteps - 1;
+
+      // Handle step specific rendering
+      switch(currentStepIndex) {
+        case 0: setupStep1(); break;
+        case 1: setupStep2(); break;
+        case 2: setupStep3(); break;
+        case 3: setupStep4(); break;
+      }
+    }
+
+    document.getElementById('next-btn').addEventListener('click', () => {
+      if (currentStepIndex < totalSteps - 1) {
+        currentStepIndex++;
+        updateActiveStep();
+      }
+    });
+
+    document.getElementById('prev-btn').addEventListener('click', () => {
+      if (currentStepIndex > 0) {
+        currentStepIndex--;
+        updateActiveStep();
+      }
+    });
+
+    // Keyboard controls
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' && !e.shiftKey) {
+        // If we are on step 4 math derivation and there are remaining steps
+        if (currentStepIndex === 3 && derivationIndex < derivationStates.length - 1) {
+          derivationIndex++;
+          renderActiveDerivation();
+        } else if (currentStepIndex < totalSteps - 1) {
+          currentStepIndex++;
+          updateActiveStep();
+        }
+      } else if (e.key === 'ArrowLeft' && !e.shiftKey) {
+        if (currentStepIndex === 3 && derivationIndex > 0) {
+          derivationIndex--;
+          renderActiveDerivation();
+        } else if (currentStepIndex > 0) {
+          currentStepIndex--;
+          updateActiveStep();
+        }
+      } else if (e.key === 'ArrowRight' && e.shiftKey) {
+        if (currentStepIndex < totalSteps - 1) {
+          currentStepIndex++;
+          updateActiveStep();
+        }
+      } else if (e.key === 'ArrowLeft' && e.shiftKey) {
+        if (currentStepIndex > 0) {
+          currentStepIndex--;
+          updateActiveStep();
+        }
+      }
+    });
+
+    // Render loop
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      updateLabelsPosition();
+      renderer.render(scene, camera);
+    }
+
+    // Initialize layout and loop
+    setTimeout(() => {
+      triggerVisualResize();
+      updateActiveStep();
+      animate();
+    }, 100);
+
+  </script>
+</body>
+</html>

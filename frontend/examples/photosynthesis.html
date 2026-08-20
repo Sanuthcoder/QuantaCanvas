@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Photosynthesis — QuantaCanvas Example</title>
+<meta name="description" content="An interactive QuantaCanvas scene explaining the limiting factors of photosynthesis." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Photosynthesis — QuantaCanvas Example" />
+<meta property="og:description" content="An interactive QuantaCanvas scene explaining the limiting factors of photosynthesis." />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Asimovian&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../css/styles.css" />
+<link rel="icon" href="../assets/favicon.ico" type="image/x-icon" />
+
+<script>if (localStorage.getItem("qc-theme") === "light") document.documentElement.classList.add("light");</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="nav">
+    <a class="brand" href="../index.html">
+      <span class="brand-mark"><img src="../assets/logo.png" alt="QuantaCanvas"></span>
+      <span class="brand-word" style="font-family: 'Asimovian', sans-serif; font-size: 24px; font-weight: 700;">Quanta<span class="c">Canvas</span></span>
+    </a>
+    <div class="nav-menu" id="navMenu">
+      <ul class="nav-links" id="navLinks">
+        <li><a href="../index.html">Home</a></li>
+        <li><a href="../about.html">About</a></li>
+        <li><a href="../examples.html">Examples</a></li>
+      </ul>
+      <button class="more-btn" id="moreBtn" aria-label="More menu" aria-expanded="false" type="button">⋯</button>
+      <ul class="more-menu" id="moreMenu"></ul>
+    </div>
+    <div class="nav-right">
+      <button class="icon-btn" data-theme-toggle type="button">☀</button>
+      <a class="btn" href="../tool.html">Try it</a>
+    </div>
+  </nav>
+</header>
+
+<main class="main vor-page">
+  <div class="vor-wrap">
+    <h1 class="vor-prompt">
+      <span class="vor-prompt-label">Prompt</span>
+      Explain the limiting factors of photosynthesis.
+    </h1>
+    <div class="viz-box">
+      <iframe src="photosynthesisiframe.html" title="Photosynthesis visualization"></iframe>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p>QuantaCanvas — visualize the concepts that text can't explain.</p>
+    <div class="footer-links">
+      <a href="../about.html">About</a>
+      <a href="../examples.html">Examples</a>
+      <a href="../tool.html">Tool</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/main.js"></script>
+</body>
+</html>

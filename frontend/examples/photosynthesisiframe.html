@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limiting Factors of Photosynthesis</title>
+    <!-- GSAP for Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <!-- p5.js for Simulations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+    <!-- KaTeX for Equations -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <style>
+        :root {
+            --bg: #1e1e2e;
+            --panel: #313244;
+            --text: #cdd6f4;
+            --muted: #6c7086;
+            --grid: #45475a;
+            --axis: #bac2de;
+            --accent1: #89b4fa; /* Blue (Light) */
+            --accent2: #f5c2e7; /* Pink (CO2/Temp) */
+            --accent3: #a6e3a1; /* Green (Photosynthesis/Plant) */
+            --hover: #f9e2af; /* Yellow (Energy/Warning) */
+            --visual-w: 55%;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text);
+        }
+
+        /* App Shell */
+        #app {
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            flex: 0 0 auto;
+            background: var(--panel);
+            padding: 0.75rem 1.5rem;
+            border-bottom: 2px solid var(--grid);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        header h1 {
+            font-size: 1.25rem;
+            color: var(--accent3);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        header h1::before {
+            content: "🌿";
+        }
+
+        .step-indicator-top {
+            font-size: 0.85rem;
+            color: var(--muted);
+            background: var(--bg);
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            border: 1px solid var(--grid);
+        }
+
+        /* Main Content Stage */
+        #stage {
+            flex: 1 1 0;
+            min-height: 0;
+            min-width: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .step-container {
+            display: none;
+            width: 100%;
+            height: 100%;
+            grid-template-columns: var(--visual-w, 55%) 6px minmax(0, 1fr);
+            grid-template-rows: minmax(0, 1fr);
+            overflow: hidden;
+        }
+
+        .step-container.active {
+            display: grid;
+        }
+
+        /* Left Visual Pane */
+        .visual-pane {
+            position: relative;
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+            background: #11111b;
+        }
+
+        .visual-host {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Resizable Divider */
+        .divider {
+            grid-column: 2;
+            cursor: col-resize;
+            background: var(--grid);
+            position: relative;
+            transition: background 0.2s;
+            z-index: 5;
+        }
+
+        .divider:hover, .divider.dragging {
+            background: var(--accent1);
+        }
+
+        .divider::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 30px;
+            background: var(--axis);
+            border-radius: 1px;
+        }
+
+        /* Right Content Pane */
+        .content-pane {
+            grid-column: 3;
+            min-width: 0;
+            min-height: 0;
+            overflow-y: auto;
+            background: var(--bg);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            border-left: 1px solid var(--grid);
+        }
+
+        .content-pane h2 {
+            font-size: 1.6rem;
+            color: var(--accent1);
+            line-height: 1.2;
+        }
+
+        .concept-text {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        .concept-text strong {
+            color: var(--accent3);
+        }
+
+        /* Equations */
+        .eq-wrap {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 1rem;
+            background: var(--panel);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent1);
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent1) transparent;
+        }
+
+        .eq-state {
+            display: inline-block;
+            white-space: nowrap;
+            min-width: max-content;
+            font-size: clamp(1.1rem, 2vw, 1.5rem);
+            transition: opacity 0.3s ease;
+        }
+
+        /* Local State Controls inside Content Pane */
+        .local-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: auto;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--grid);
+        }
+
+        .btn-sub {
+            background: var(--panel);
+            color: var(--text);
+            border: 1px solid var(--grid);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-sub:hover:not(:disabled) {
+            background: var(--grid);
+            border-color: var(--accent1);
+            color: var(--accent1);
+        }
+
+        .btn-sub:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .state-dots {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--grid);
+            transition: background 0.3s;
+        }
+
+        .dot.active {
+            background: var(--accent1);
+        }
+
+        /* Floating Sandbox Control HUD on Visual Panel */
+        .hud-overlay {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 1.5rem;
+            right: 1.5rem;
+            background: rgba(49, 50, 68, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--grid);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            z-index: 8;
+        }
+
+        .hud-title {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: var(--accent3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.25rem;
+        }
+
+        .sliders-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 850px) {
+            .sliders-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--axis);
+        }
+
+        .control-label span.val {
+            font-weight: bold;
+            color: var(--accent1);
+        }
+
+        .custom-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--grid);
+            outline: none;
+            transition: background 0.2s;
+        }
+
+        .custom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent1);
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(137, 180, 250, 0.5);
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .custom-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: var(--hover);
+        }
+
+        /* Live Limiting Factor Badge */
+        .status-badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid transparent;
+        }
+
+        .status-badge.limiting {
+            background: rgba(245, 194, 231, 0.1);
+            color: var(--accent2);
+            border-color: var(--accent2);
+        }
+
+        .status-badge.optimal {
+            background: rgba(166, 227, 161, 0.1);
+            color: var(--accent3);
+            border-color: var(--accent3);
+        }
+
+        /* Footer Navigation Bar */
+        footer {
+            flex: 0 0 auto;
+            background: var(--panel);
+            padding: 1rem 1.5rem;
+            border-top: 2px solid var(--grid);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .nav-btn {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--grid);
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: var(--grid);
+            border-color: var(--accent1);
+            color: var(--accent1);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .nav-btn.primary {
+            background: var(--accent1);
+            color: var(--bg);
+            border-color: var(--accent1);
+        }
+
+        .nav-btn.primary:hover {
+            background: var(--hover);
+            color: var(--bg);
+            border-color: var(--hover);
+        }
+
+        .step-dots-main {
+            display: flex;
+            gap: 0.6rem;
+        }
+
+        .dot-main {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--grid);
+            cursor: pointer;
+            transition: transform 0.2s, background 0.3s;
+        }
+
+        .dot-main.active {
+            background: var(--accent1);
+            transform: scale(1.3);
+        }
+
+        /* Dynamic Visual Indicators */
+        .light-beam {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            pointer-events: none;
+            background: linear-gradient(90deg, rgba(249, 226, 175, 0.15) 0%, rgba(249, 226, 175, 0) 100%);
+            z-index: 1;
+        }
+
+        /* Keyboard Shortcut Hint */
+        .kbd-hint {
+            font-size: 0.75rem;
+            color: var(--muted);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .kbd-key {
+            background: var(--bg);
+            border: 1px solid var(--grid);
+            padding: 0.1rem 0.3rem;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <header>
+        <h1>Limiting Factors of Photosynthesis</h1>
+        <div class="step-indicator-top" id="topStepIndicator">Step 1 of 4</div>
+    </header>
+
+    <div id="stage">
+        <!-- STEP 1: LIGHT INTENSITY (INVERSE SQUARE LAW) -->
+        <div class="step-container active" id="step1" data-layout="split">
+            <div class="visual-pane">
+                <div class="visual-host" id="canvas1"></div>
+            </div>
+            <div class="divider" role="separator"></div>
+            <div class="content-pane">
+                <h2>1. Light Intensity & The Inverse Square Law</h2>
+                <p class="concept-text">
+                    Photosynthesis is driven by light energy. As a light source is moved further from a plant, the light intensity reaching the leaves drops off dramatically. 
+                    This relationship is governed by the <strong>Inverse Square Law</strong>.
+                </p>
+                
+                <div class="eq-wrap">
+                    <div class="eq-state" id="eq1">Loading formula...</div>
+                </div>
+
+                <p class="concept-text" id="desc1">
+                    Drag the light source in the simulation to observe how the rate of oxygen bubbles (representing the rate of photosynthesis) decreases exponentially as distance increases.
+                </p>
+
+                <div class="local-controls">
+                    <button class="btn-sub" id="prevState1" disabled>◀ Prev Equation</button>
+                    <div class="state-dots" id="dots1"></div>
+                    <button class="btn-sub" id="nextState1">Next Equation ▶</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: CARBON DIOXIDE CONCENTRATION -->
+        <div class="step-container" id="step2" data-layout="split">
+            <div class="visual-pane">
+                <div class="visual-host" id="canvas2"></div>
+            </div>
+            <div class="divider" role="separator"></div>
+            <div class="content-pane">
+                <h2>2. Carbon Dioxide Concentration</h2>
+                <p class="concept-text">
+                    Carbon dioxide is a crucial raw material for building glucose in the light-independent stage. 
+                    Initially, increasing CO₂ concentration increases the photosynthetic rate linearly.
+                </p>
+                
+                <div class="eq-wrap">
+                    <div class="eq-state" id="eq2">Loading formula...</div>
+                </div>
+
+                <p class="concept-text" id="desc2">
+                    Use the $CO_2$ slider to add carbon dioxide to the water. Notice that the rate plateaus once $CO_2$ is no longer the limiting factor. At this point, another factor (like light or temperature) limits the process.
+                </p>
+
+                <div class="local-controls">
+                    <button class="btn-sub" id="prevState2" disabled>◀ Prev Equation</button>
+                    <div class="state-dots" id="dots2"></div>
+                    <button class="btn-sub" id="nextState2">Next Equation ▶</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 3: TEMPERATURE & ENZYMES -->
+        <div class="step-container" id="step3" data-layout="split">
+            <div class="visual-pane">
+                <div class="visual-host" id="canvas3"></div>
+            </div>
+            <div class="divider" role="separator"></div>
+            <div class="content-pane">
+                <h2>3. Temperature & Enzyme Activity</h2>
+                <p class="concept-text">
+                    Photosynthesis relies on metabolic enzymes (like <strong>Rubisco</strong>). 
+                    As temperature rises, molecules gain kinetic energy, causing more successful collisions and accelerating the reaction.
+                </p>
+                
+                <div class="eq-wrap">
+                    <div class="eq-state" id="eq3">Loading formula...</div>
+                </div>
+
+                <p class="concept-text" id="desc3">
+                    Adjust the temperature slider. Above the optimum temperature (typically $35^\circ\text{C} - 40^\circ\text{C}$), thermal energy disrupts the hydrogen bonds holding the enzymes' tertiary structures together. The active sites denature, halting photosynthesis immediately.
+                </p>
+
+                <div class="local-controls">
+                    <button class="btn-sub" id="prevState3" disabled>◀ Prev Equation</button>
+                    <div class="state-dots" id="dots3"></div>
+                    <button class="btn-sub" id="nextState3">Next Equation ▶</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 4: MULTI-FACTOR INTERACTIVE LAB -->
+        <div class="step-container" id="step4" data-layout="split">
+            <div class="visual-pane">
+                <div class="visual-host" id="canvas4"></div>
+                <!-- Controls overlay inside visual container to keep everything responsive -->
+                <div class="hud-overlay">
+                    <div class="hud-title">Experimental Control Center</div>
+                    <div class="sliders-grid">
+                        <div class="control-group">
+                            <label class="control-label">Light Distance (d): <span class="val" id="hudDistVal">20 cm</span></label>
+                            <input type="range" min="10" max="100" value="30" class="custom-slider" id="hudLightSlider">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label">CO₂ Concentration: <span class="val" id="hudCO2Val">0.04%</span></label>
+                            <input type="range" min="0" max="100" value="20" class="custom-slider" id="hudCO2Slider">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label">Temperature: <span class="val" id="hudTempVal">20°C</span></label>
+                            <input type="range" min="0" max="50" value="20" class="custom-slider" id="hudTempSlider">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="divider" role="separator"></div>
+            <div class="content-pane">
+                <h2>4. The Complete Investigation</h2>
+                <p class="concept-text">
+                    In nature, multiple limiting factors act simultaneously. According to <strong>Liebig's Law of the Minimum</strong>, the rate of photosynthesis is limited by the single factor that is furthest from its optimal value.
+                </p>
+
+                <div class="eq-wrap" style="text-align: center;">
+                    <div id="sandboxStatus" class="status-badge limiting">Calculating...</div>
+                </div>
+
+                <p class="concept-text">
+                    Vary all three parameters in the control panel to see which factor dominates the limits at any one time.
+                    Watch the real-time bubble production speed up and slow down accordingly.
+                </p>
+
+                <div class="eq-wrap">
+                    <div class="eq-state" id="eq4">Loading formula...</div>
+                </div>
+
+                <div class="local-controls">
+                    <button class="btn-sub" id="prevState4" disabled>◀ Prev Equation</button>
+                    <div class="state-dots" id="dots4"></div>
+                    <button class="btn-sub" id="nextState4">Next Equation ▶</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="kbd-hint">
+            <span><span class="kbd-key">Shift</span> + <span class="kbd-key">←</span> / <span class="kbd-key">→</span> Next Step</span>
+            <span><span class="kbd-key">←</span> / <span class="kbd-key">→</span> Next Eq State</span>
+        </div>
+        <div class="step-dots-main" id="mainStepDots"></div>
+        <div style="display: flex; gap: 0.75rem;">
+            <button class="nav-btn" id="prevStepBtn">◀ Prev</button>
+            <button class="nav-btn primary" id="nextStepBtn">Next ▶</button>
+        </div>
+    </footer>
+</div>
+
+<script>
+    // Theme configurations mapping to CSS variables
+    const THEME = {
+        bg: '#1e1e2e',
+        panel: '#313244',
+        text: '#cdd6f4',
+        muted: '#6c7086',
+        grid: '#45475a',
+        axis: '#bac2de',
+        accent1: '#89b4fa',
+        accent2: '#f5c2e7',
+        accent3: '#a6e3a1',
+        hover: '#f9e2af'
+    };
+
+    // Global App State
+    let currentStep = 0;
+    const TOTAL_STEPS = 4;
+    const p5Instances = [];
+    
+    // Step State Trackers (equation states per step)
+    const stepStates = [
+        { current: 0, total: 3 }, // Step 1 states
+        { current: 0, total: 3 }, // Step 2 states
+        { current: 0, total: 3 }, // Step 3 states
+        { current: 0, total: 2 }  // Step 4 states
+    ];
+
+    // Math Formulas
+    const formulas = [
+        [
+            "\\text{Rate of Photosynthesis } (R) \\propto \\text{Light Intensity } (I)",
+            "I \\propto \\frac{1}{d^2} \\quad \\text{[Inverse Square Law]}",
+            "\\textcolor{#a6e3a1}{R} \\approx \\frac{k}{\\textcolor{#f5c2e7}{d^2}}"
+        ],
+        [
+            "6\\text{CO}_2 + 6\\text{H}_2\\text{O} \\xrightarrow{\\text{light energy}} \\text{C}_6\\text{H}_{12}\\text{O}_6 + 6\\text{O}_2",
+            "\\text{At low } [\\text{CO}_2]: \\quad R \\propto \\textcolor{#89b4fa}{[\\text{CO}_2]}",
+            "\\text{At saturated } [\\text{CO}_2]: \\quad R = \\text{Constant} \\quad [\\text{limited by Light/Temp}]"
+        ],
+        [
+            "\\text{Rate } (R) \\propto \\text{Kinetic Energy} \\quad \\text{[low Temp: } 0^{\\circ}\\text{C} \\to 35^{\\circ}\\text{C}]",
+            "\\text{Optimal Temperature: } T_{\\text{opt}} \\approx 37^{\\circ}\\text{C}",
+            "\\text{Denaturation: } T > 40^{\\circ}\\text{C} \\implies \\text{Rubisco shape warped} \\implies R \\to 0"
+        ],
+        [
+            "R = \\min\\left( R_{\\text{light}}, R_{\\text{CO}_2}, R_{\\text{temp}} \\right)",
+            "\\text{Active Limiting Factor} = \\text{argmin}\\left( \\text{Light}, \\text{CO}_2, \\text{Temp} \\right)"
+        ]
+    ];
+
+    // Descriptions per state
+    const descriptions = [
+        [
+            "Photosynthesis rate is directly proportional to light intensity because photons power the light-dependent reactions.",
+            "Light dispersion from a point source spreads out over a sphere, meaning intensity decreases rapidly by the square of the distance ($d$).",
+            "Combining these ideas reveals why moving the lamp double the distance ($2d$) drops the bubble rate to a quarter ($1/4$). Try it in the simulation!"
+        ],
+        [
+            "Carbon dioxide molecules are fixed in the Calvin cycle. Without $CO_2$, the chemical machine slows to a crawl.",
+            "Initially, as you add more carbon dioxide, the photosynthetic rate increases proportionally. It acts as the limiting factor.",
+            "Eventually, the active sites of Rubisco enzymes become completely saturated. Further $CO_2$ provides no increase; light or temperature is now limiting."
+        ],
+        [
+            "Low heat means molecules bounce slowly, reducing the frequency of substrate-enzyme collisions.",
+            "Near the optimum temperature, the reaction velocity peaks as kinetic energy maximizes collision rates without destabilizing proteins.",
+            "Beyond the optimum, high thermal kinetic energy vibrates protein chains, unraveling structural bonds. The active site is lost forever, collapsing the process."
+        ],
+        [
+            "Under Liebig's Law of the Minimum, whichever nutrient or constraint is least available dictates the absolute rate of photosynthesis.",
+            "Balance all three variables in the HUD to achieve the maximum rate. Discover how changing a single sub-optimal value drops the entire yield!"
+        ]
+    ];
+
+    // Safe KaTeX Render helper
+    function safeRenderKatex(formula, element) {
+        const cleaned = formula.trim();
+        const checkExist = setInterval(() => {
+            if (typeof window.katex !== 'undefined') {
+                clearInterval(checkExist);
+                try {
+                    window.katex.render(cleaned, element, { throwOnError: false, displayMode: true });
+                } catch (err) { console.error(err); }
+            }
+        }, 30);
+    }
+
+    function safeAutoRender(rootElement) {
+        const tryRender = setInterval(() => {
+            if (typeof window.renderMathInElement !== 'undefined') {
+                clearInterval(tryRender);
+                window.renderMathInElement(rootElement, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$',  right: '$',  display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError: false,
+                    ignoredTags: ['script','noscript','style','textarea','pre','code','option']
+                });
+            }
+        }, 30);
+    }
+
+    // --- P5.JS SIMULATION SKETCHES ---
+
+    // Shared bubble particle class
+    class Bubble {
+        constructor(p, x, y) {
+            this.p = p;
+            this.x = x + p.random(-4, 4);
+            this.y = y;
+            this.r = p.random(3, 7);
+            this.speed = p.random(1.5, 3.5);
+        }
+        update() {
+            this.y -= this.speed;
+            this.x += this.p.sin(this.p.frameCount * 0.1 + this.y * 0.05) * 0.6;
+        }
+        draw() {
+            this.p.stroke(THEME.accent1);
+            this.p.strokeWeight(1);
+            this.p.fill(255, 255, 255, 80);
+            this.p.ellipse(this.x, this.y, this.r * 2);
+        }
+    }
+
+    function drawBeaker(p, x, y, w, h) {
+        // Water
+        p.noStroke();
+        p.fill(30, 41, 59, 150);
+        p.rect(x - w/2 + 4, y - h + 15, w - 8, h - 20, 0, 0, 8, 8);
+        
+        // Glass Beaker outline
+        p.stroke(THEME.axis);
+        p.strokeWeight(3);
+        p.noFill();
+        p.beginShape();
+        p.vertex(x - w/2, y - h);
+        p.vertex(x - w/2, y);
+        p.vertex(x + w/2, y);
+        p.vertex(x + w/2, y - h);
+        p.endShape();
+        
+        // Spout notches
+        p.line(x - w/2, y - h, x - w/2 - 5, y - h - 3);
+        p.line(x - w/2 - 5, y - h - 3, x - w/2 + 5, y - h);
+    }
+
+    function drawPondweed(p, x, y, len) {
+        // Stem
+        p.stroke(THEME.accent3);
+        p.strokeWeight(4);
+        p.line(x, y, x, y - len);
+        
+        // Leaves
+        p.noStroke();
+        p.fill(THEME.accent3);
+        for (let i = 20; i < len; i += 20) {
+            p.push();
+            p.translate(x, y - i);
+            p.rotate(p.sin(p.frameCount * 0.05 + i) * 0.15);
+            p.ellipse(-10, 0, 15, 6);
+            p.ellipse(10, 0, 15, 6);
+            p.pop();
+        }
+    }
+
+    // Step 1: Light Intensity
+    const sketch1 = (p) => {
+        let lampX = 120;
+        let isDragging = false;
+        let bubbles = [];
+        
+        p.setup = () => {
+            const host = document.getElementById('canvas1');
+            p.createCanvas(host.clientWidth, host.clientHeight);
+        };
+
+        p.draw = () => {
+            p.background('#11111b');
+            
+            // Layout dimensions
+            let centerY = p.height * 0.65;
+            let beakerX = p.width * 0.65;
+            
+            // Calculate distance d and intensity
+            let d = p.max(50, p.abs(beakerX - lampX));
+            let intensity = 200000 / (d * d); // Inverse square relation
+            let bubbleRate = p.map(p.constrain(intensity, 0, 20), 0, 20, 0, 120);
+
+            // Draw light cone / beam
+            p.noStroke();
+            let lampRad = 40;
+            p.fill(249, 226, 175, p.map(intensity, 0, 20, 5, 80));
+            p.beginShape();
+            p.vertex(lampX, centerY - 10);
+            p.vertex(beakerX + 60, centerY - 100);
+            p.vertex(beakerX + 60, centerY + 100);
+            p.endShape(p.CLOSE);
+
+            // Draw Beaker and Pondweed
+            drawBeaker(p, beakerX, centerY + 50, 120, 150);
+            drawPondweed(p, beakerX, centerY + 45, 100);
+
+            // Draw Lamp
+            p.fill(isDragging ? THEME.hover : THEME.panel);
+            p.stroke(THEME.axis);
+            p.strokeWeight(2);
+            p.rect(lampX - 25, centerY - 25, 50, 50, 10);
+            p.fill(THEME.hover);
+            p.ellipse(lampX + 15, centerY, 15, 25); // Bulb
+
+            // Dragging Interaction
+            if (p.mouseIsPressed) {
+                if (isDragging) {
+                    lampX = p.constrain(p.mouseX, 40, beakerX - 65);
+                } else if (p.dist(p.mouseX, p.mouseY, lampX, centerY) < 40) {
+                    isDragging = true;
+                }
+            } else {
+                isDragging = false;
+            }
+
+            // Generate and update bubbles
+            if (bubbleRate > 5 && p.frameCount % p.floor(p.max(1, 100 / bubbleRate)) === 0) {
+                bubbles.push(new Bubble(p, beakerX, centerY - 45));
+            }
+
+            for (let i = bubbles.length - 1; i >= 0; i--) {
+                bubbles[i].update();
+                bubbles[i].draw();
+                if (bubbles[i].y < centerY - 120) {
+                    bubbles.splice(i, 1);
+                }
+            }
+
+            // Annotation Labels
+            p.fill(THEME.text);
+            p.noStroke();
+            p.textSize(12);
+            p.textAlign(p.CENTER);
+            p.text(`Distance (d) = ${p.round(d / 4)} cm`, (lampX + beakerX) / 2, centerY + 90);
+            p.stroke(THEME.muted);
+            p.strokeWeight(1);
+            p.line(lampX + 25, centerY + 75, beakerX - 60, centerY + 75);
+            
+            // Arrows
+            p.line(lampX + 25, centerY + 75, lampX + 35, centerY + 70);
+            p.line(lampX + 25, centerY + 75, lampX + 35, centerY + 80);
+            p.line(beakerX - 60, centerY + 75, beakerX - 70, centerY + 70);
+            p.line(beakerX - 60, centerY + 75, beakerX - 70, centerY + 80);
+
+            // Mini Dashboard Graph Overlay
+            p.push();
+            p.translate(30, 30);
+            p.stroke(THEME.grid);
+            p.strokeWeight(1);
+            p.fill('#181825');
+            p.rect(0, 0, 160, 100, 8);
+            
+            // Axes
+            p.stroke(THEME.axis);
+            p.line(20, 80, 140, 80); // X axis
+            p.line(20, 20, 20, 80);  // Y axis
+            
+            // Plot rate vs distance
+            p.noFill();
+            p.stroke(THEME.accent1);
+            p.strokeWeight(2);
+            p.beginShape();
+            for (let rx = 21; rx < 140; rx++) {
+                let rD = p.map(rx, 20, 140, 50, beakerX - 40);
+                let rI = 200000 / (rD * rD);
+                let ry = p.map(p.constrain(rI, 0, 20), 0, 20, 80, 25);
+                p.vertex(rx, ry);
+            }
+            p.endShape();
+
+            // Current state point
+            let currentPtX = p.map(d, 50, beakerX - 40, 20, 140);
+            let currentPtY = p.map(p.constrain(intensity, 0, 20), 0, 20, 80, 25);
+            p.fill(THEME.hover);
+            p.noStroke();
+            p.ellipse(currentPtX, currentPtY, 8);
+
+            p.fill(THEME.muted);
+            p.textSize(8);
+            p.textAlign(p.LEFT);
+            p.text("Rate", 5, 15);
+            p.text("Distance (d)", 90, 95);
+            p.pop();
+        };
+
+        p.windowResized = () => {
+            const host = document.getElementById('canvas1');
+            p.resizeCanvas(host.clientWidth, host.clientHeight);
+        };
+    };
+
+    // Step 2: CO2 Concentration
+    const sketch2 = (p) => {
+        let co2Level = 20; // range 0-100
+        let bubbles = [];
+        let particles = [];
+        let co2Slider;
+
+        p.setup = () => {
+            const host = document.getElementById('canvas2');
+            p.createCanvas(host.clientWidth, host.clientHeight);
+            
+            // Create DOM slider inside visual container dynamically
+            co2Slider = p.createSlider(0, 100, co2Level);
+            co2Slider.position(20, p.height - 40);
+            co2Slider.addClass('custom-slider');
+            co2Slider.style('width', `${p.width - 40}px`);
+        };
+
+        p.draw = () => {
+            p.background('#11111b');
+            co2Level = co2Slider.value();
+
+            let beakerX = p.width * 0.5;
+            let centerY = p.height * 0.5;
+
+            // Biological response curve of CO2 (plateaus)
+            let bubbleRate = p.map(p.log(co2Level / 10 + 1) || 0, 0, p.log(11), 0, 110);
+
+            // Draw Beaker and Pondweed
+            drawBeaker(p, beakerX, centerY + 80, 150, 180);
+            drawPondweed(p, beakerX, centerY + 70, 120);
+
+            // Spawn floating CO2 indicators (particles)
+            if (particles.length < co2Level * 0.8) {
+                particles.push({
+                    x: p.random(beakerX - 60, beakerX + 60),
+                    y: p.random(centerY - 50, centerY + 70),
+                    vx: p.random(-0.5, 0.5),
+                    vy: p.random(-0.5, 0.5),
+                    sz: p.random(3, 6)
+                });
+            } else if (particles.length > co2Level * 0.8) {
+                particles.pop();
+            }
+
+            // Draw CO2 particles
+            p.noStroke();
+            p.fill(THEME.accent2);
+            particles.forEach(pt => {
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                // Keep inside beaker bounds
+                if (pt.x < beakerX - 60 || pt.x > beakerX + 60) pt.vx *= -1;
+                if (pt.y < centerY - 70 || pt.y > centerY + 70) pt.vy *= -1;
+                p.ellipse(pt.x, pt.y, pt.sz);
+            });
+
+            // Generate and update bubbles
+            if (bubbleRate > 5 && p.frameCount % p.floor(p.max(1, 120 / bubbleRate)) === 0) {
+                bubbles.push(new Bubble(p, beakerX, centerY - 30));
+            }
+
+            for (let i = bubbles.length - 1; i >= 0; i--) {
+                bubbles[i].update();
+                bubbles[i].draw();
+                if (bubbles[i].y < centerY - 80) {
+                    bubbles.splice(i, 1);
+                }
+            }
+
+            // Mini Dashboard Graph Overlay
+            p.push();
+            p.translate(20, 20);
+            p.stroke(THEME.grid);
+            p.strokeWeight(1);
+            p.fill('#181825');
+            p.rect(0, 0, 160, 100, 8);
+            
+            p.stroke(THEME.axis);
+            p.line(20, 80, 140, 80); // X axis
+            p.line(20, 20, 20, 80);  // Y axis
+            
+            // Plot rate vs CO2 curve
+            p.noFill();
+            p.stroke(THEME.accent2);
+            p.strokeWeight(2);
+            p.beginShape();
+            for (let rx = 20; rx < 140; rx++) {
+                let rc = p.map(rx, 20, 140, 0, 100);
+                let ry = p.map(p.log(rc / 10 + 1), 0, p.log(11), 80, 25);
+                p.vertex(rx, ry);
+            }
+            p.endShape();
+
+            // Current point
+            let currentPtX = p.map(co2Level, 0, 100, 20, 140);
+            let currentPtY = p.map(p.log(co2Level / 10 + 1), 0, p.log(11), 80, 25);
+            p.fill(THEME.hover);
+            p.noStroke();
+            p.ellipse(currentPtX, currentPtY, 8);
+
+            p.fill(THEME.muted);
+            p.textSize(8);
+            p.textAlign(p.LEFT);
+            p.text("Rate", 5, 15);
+            p.text("CO2 Conc.", 90, 95);
+            p.pop();
+
+            // Render text on canvas
+            p.fill(THEME.text);
+            p.noStroke();
+            p.textSize(12);
+            p.textAlign(p.CENTER);
+            p.text(`Adjust CO₂ Conc: ${co2Level}%`, p.width / 2, p.height - 50);
+        };
+
+        p.windowResized = () => {
+            const host = document.getElementById('canvas2');
+            p.resizeCanvas(host.clientWidth, host.clientHeight);
+            co2Slider.position(20, p.height - 40);
+            co2Slider.style('width', `${p.width - 40}px`);
+        };
+    };
+
+    // Step 3: Temperature
+    const sketch3 = (p) => {
+        let tempVal = 20; // 0-50 C
+        let bubbles = [];
+        let tempSlider;
+
+        p.setup = () => {
+            const host = document.getElementById('canvas3');
+            p.createCanvas(host.clientWidth, host.clientHeight);
+            
+            tempSlider = p.createSlider(0, 50, tempVal);
+            tempSlider.position(20, p.height - 40);
+            tempSlider.addClass('custom-slider');
+            tempSlider.style('width', `${p.width - 40}px`);
+        };
+
+        p.draw = () => {
+            p.background('#11111b');
+            tempVal = tempSlider.value();
+
+            let beakerX = p.width * 0.5;
+            let centerY = p.height * 0.5;
+
+            // Enzyme active site heat bell-curve behavior
+            let bubbleRate = 0;
+            if (tempVal < 37) {
+                // Rising curve (Q10 effect)
+                bubbleRate = p.map(p.pow(2, (tempVal - 10) / 10), 0.5, 6, 5, 120);
+            } else {
+                // Precipitous drop due to rapid denaturation
+                bubbleRate = p.map(tempVal, 37, 45, 120, 0);
+                if (tempVal >= 45) bubbleRate = 0;
+            }
+
+            // Draw Beaker and Pondweed
+            drawBeaker(p, beakerX, centerY + 80, 150, 180);
+            
+            // Draw Pondweed (Warp colors slightly at hot temperature to suggest heat distress)
+            let plantColor = p.lerpColor(p.color(THEME.accent3), p.color('#f9e2af'), p.map(p.constrain(tempVal, 30, 50), 30, 50, 0, 1));
+            p.stroke(plantColor);
+            p.strokeWeight(4);
+            p.line(beakerX, centerY + 70, beakerX, centerY - 50);
+            p.noStroke();
+            p.fill(plantColor);
+            for (let i = 20; i < 120; i += 20) {
+                p.push();
+                p.translate(beakerX, centerY + 70 - i);
+                p.ellipse(-10, 0, 15, 6);
+                p.ellipse(10, 0, 15, 6);
+                p.pop();
+            }
+
+            // Microthermal ripples in background
+            p.noFill();
+            p.stroke(245, 194, 231, p.map(tempVal, 0, 50, 10, 90));
+            p.strokeWeight(1);
+            for (let k = 0; k < 5; k++) {
+                let waveY = centerY + 10 + k * 12;
+                p.beginShape();
+                for (let wx = beakerX - 60; wx < beakerX + 60; wx += 5) {
+                    let offset = p.sin(p.frameCount * 0.1 * (tempVal/10 + 1) + wx * 0.1) * (tempVal / 10);
+                    p.vertex(wx, waveY + offset);
+                }
+                p.endShape();
+            }
+
+            // Generate and update bubbles
+            if (bubbleRate > 5 && p.frameCount % p.floor(p.max(1, 120 / bubbleRate)) === 0) {
+                bubbles.push(new Bubble(p, beakerX, centerY - 30));
+            }
+
+            for (let i = bubbles.length - 1; i >= 0; i--) {
+                bubbles[i].update();
+                bubbles[i].draw();
+                if (bubbles[i].y < centerY - 80) {
+                    bubbles.splice(i, 1);
+                }
+            }
+
+            // Draw Thermometer on screen
+            p.fill(THEME.panel);
+            p.stroke(THEME.axis);
+            p.strokeWeight(2);
+            p.rect(p.width - 60, centerY - 80, 20, 150, 10);
+            // Mercury level
+            let fillH = p.map(tempVal, 0, 50, 0, 130);
+            p.fill(THEME.hover);
+            p.noStroke();
+            p.rect(p.width - 55, centerY + 65 - fillH, 10, fillH, 5);
+
+            // Mini Dashboard Graph Overlay
+            p.push();
+            p.translate(20, 20);
+            p.stroke(THEME.grid);
+            p.strokeWeight(1);
+            p.fill('#181825');
+            p.rect(0, 0, 160, 100, 8);
+            
+            p.stroke(THEME.axis);
+            p.line(20, 80, 140, 80); // X axis
+            p.line(20, 20, 20, 80);  // Y axis
+            
+            // Plot rate vs temperature bell curve
+            p.noFill();
+            p.stroke(THEME.hover);
+            p.strokeWeight(2);
+            p.beginShape();
+            for (let rx = 20; rx < 140; rx++) {
+                let rt = p.map(rx, 20, 140, 0, 50);
+                let rRate = 0;
+                if (rt < 37) {
+                    rRate = p.map(p.pow(2, (rt - 10) / 10), 0.5, 6, 80, 25);
+                } else {
+                    rRate = p.map(rt, 37, 45, 25, 80);
+                    if (rt >= 45) rRate = 80;
+                }
+                p.vertex(rx, p.constrain(rRate, 25, 80));
+            }
+            p.endShape();
+
+            // Current point
+            let ptX = p.map(tempVal, 0, 50, 20, 140);
+            let ptY = 80;
+            if (tempVal < 37) {
+                ptY = p.map(p.pow(2, (tempVal - 10) / 10), 0.5, 6, 80, 25);
+            } else {
+                ptY = p.map(tempVal, 37, 45, 25, 80);
+                if (tempVal >= 45) ptY = 80;
+            }
+            p.fill(THEME.hover);
+            p.noStroke();
+            p.ellipse(ptX, ptY, 8);
+
+            p.fill(THEME.muted);
+            p.textSize(8);
+            p.textAlign(p.LEFT);
+            p.text("Rate", 5, 15);
+            p.text("Temp (°C)", 90, 95);
+            p.pop();
+
+            p.fill(THEME.text);
+            p.noStroke();
+            p.textSize(12);
+            p.textAlign(p.CENTER);
+            p.text(`Adjust Temp: ${tempVal}°C`, p.width / 2, p.height - 50);
+        };
+
+        p.windowResized = () => {
+            const host = document.getElementById('canvas3');
+            p.resizeCanvas(host.clientWidth, host.clientHeight);
+            tempSlider.position(20, p.height - 40);
+            tempSlider.style('width', `${p.width - 40}px`);
+        };
+    };
+
+    // Step 4: Multi-Factor Interactive Lab
+    const sketch4 = (p) => {
+        let bubbles = [];
+
+        p.setup = () => {
+            const host = document.getElementById('canvas4');
+            p.createCanvas(host.clientWidth, host.clientHeight);
+        };
+
+        p.draw = () => {
+            p.background('#11111b');
+
+            // Read HTML input dynamic parameters
+            let d = parseFloat(document.getElementById('hudLightSlider').value);
+            let co2 = parseFloat(document.getElementById('hudCO2Slider').value);
+            let temp = parseFloat(document.getElementById('hudTempSlider').value);
+
+            // Dynamically update text labels on HUD overlay
+            document.getElementById('hudDistVal').innerText = `${d} cm`;
+            document.getElementById('hudCO2Val').innerText = `${(co2 * 0.004).toFixed(3)}%`;
+            document.getElementById('hudTempVal').innerText = `${temp}°C`;
+
+            // Compute rate factor capacities
+            // 1. Light Intensity
+            let lightIntensity = 200000 / (d * d * 15); // normalized scale
+            let rateLight = p.map(p.constrain(lightIntensity, 0, 5), 0, 5, 0, 100);
+
+            // 2. CO2 Level
+            let rateCO2 = p.map(p.log(co2 / 10 + 1), 0, p.log(11), 0, 100);
+
+            // 3. Temp Level
+            let rateTemp = 0;
+            if (temp < 37) {
+                rateTemp = p.map(p.pow(2, (temp - 10) / 10), 0.5, 6, 0, 100);
+            } else {
+                rateTemp = p.map(temp, 37, 45, 100, 0);
+                if (temp >= 45) rateTemp = 0;
+            }
+            rateTemp = p.constrain(rateTemp, 0, 100);
+
+            // Liebig's Law of the Minimum - Determine limiting constraint
+            let activeRate = p.min(p.min(rateLight, rateCO2), rateTemp);
+            let limitingFactor = "Optimal";
+
+            if (activeRate === rateLight) {
+                limitingFactor = "Light Intensity";
+                document.getElementById('sandboxStatus').className = "status-badge limiting";
+                document.getElementById('sandboxStatus').style.borderColor = THEME.accent1;
+                document.getElementById('sandboxStatus').style.color = THEME.accent1;
+            } else if (activeRate === rateCO2) {
+                limitingFactor = "CO₂ Concentration";
+                document.getElementById('sandboxStatus').className = "status-badge limiting";
+                document.getElementById('sandboxStatus').style.borderColor = THEME.accent2;
+                document.getElementById('sandboxStatus').style.color = THEME.accent2;
+            } else {
+                limitingFactor = "Temperature (Enzyme Denaturation)";
+                document.getElementById('sandboxStatus').className = "status-badge limiting";
+                document.getElementById('sandboxStatus').style.borderColor = THEME.hover;
+                document.getElementById('sandboxStatus').style.color = THEME.hover;
+            }
+
+            if (activeRate > 80) {
+                limitingFactor = "Substrates Saturated (Optimal)";
+                document.getElementById('sandboxStatus').className = "status-badge optimal";
+            }
+
+            document.getElementById('sandboxStatus').innerText = `Limiting Factor: ${limitingFactor}`;
+
+            // Draw Beaker and Plant Setup
+            let beakerX = p.width * 0.5;
+            let centerY = p.height * 0.42;
+
+            // Beam of light
+            p.noStroke();
+            p.fill(249, 226, 175, p.map(lightIntensity, 0, 5, 0, 50));
+            p.triangle(0, centerY - 100, beakerX + 60, centerY - 100, beakerX + 60, centerY + 100);
+
+            drawBeaker(p, beakerX, centerY + 60, 130, 150);
+            drawPondweed(p, beakerX, centerY + 50, 100);
+
+            // Bubble spawning physics based on multi-variable computation
+            if (activeRate > 5 && p.frameCount % p.floor(p.max(1, 150 / activeRate)) === 0) {
+                bubbles.push(new Bubble(p, beakerX, centerY - 45));
+            }
+
+            for (let i = bubbles.length - 1; i >= 0; i--) {
+                bubbles[i].update();
+                bubbles[i].draw();
+                if (bubbles[i].y < centerY - 90) {
+                    bubbles.splice(i, 1);
+                }
+            }
+
+            // Bar Charts inside Visual Area indicating current potential vs limited real rate
+            p.push();
+            p.translate(20, 20);
+            p.stroke(THEME.grid);
+            p.fill('rgba(24, 24, 37, 0.85)');
+            p.rect(0, 0, 150, 110, 8);
+            p.noStroke();
+            
+            p.textSize(9);
+            p.fill(THEME.accent1);
+            p.text("Light Factor", 10, 25);
+            p.fill(THEME.grid);
+            p.rect(10, 30, 100, 6, 3);
+            p.fill(THEME.accent1);
+            p.rect(10, 30, rateLight, 6, 3);
+
+            p.fill(THEME.accent2);
+            p.text("CO2 Factor", 10, 55);
+            p.fill(THEME.grid);
+            p.rect(10, 60, 100, 6, 3);
+            p.fill(THEME.accent2);
+            p.rect(10, 60, rateCO2, 6, 3);
+
+            p.fill(THEME.hover);
+            p.text("Temperature Factor", 10, 85);
+            p.fill(THEME.grid);
+            p.rect(10, 90, 100, 6, 3);
+            p.fill(THEME.hover);
+            p.rect(10, 90, rateTemp, 6, 3);
+
+            // Highlight minimum (limiting constraint indicator)
+            p.stroke(THEME.accent3);
+            p.strokeWeight(1.5);
+            p.noFill();
+            if (activeRate === rateLight) p.rect(5, 12, 140, 28, 4);
+            else if (activeRate === rateCO2) p.rect(5, 42, 140, 28, 4);
+            else p.rect(5, 72, 140, 28, 4);
+            p.pop();
+        };
+
+        p.windowResized = () => {
+            const host = document.getElementById('canvas4');
+            p.resizeCanvas(host.clientWidth, host.clientHeight);
+        };
+    };
+
+    // --- NAVIGATION AND EVENT MANAGER ---
+
+    function initStep(stepIdx) {
+        // Clear previous p5 instances properly to free up canvas memory context
+        p5Instances.forEach(inst => inst.remove());
+        p5Instances.length = 0;
+
+        // Hide all steps, show target step
+        const containers = document.querySelectorAll('.step-container');
+        containers.forEach((el, i) => {
+            if (i === stepIdx) {
+                el.classList.add('active');
+            } else {
+                el.classList.remove('active');
+            }
+        });
+
+        // Initialize unique step p5 sketch
+        if (stepIdx === 0) p5Instances.push(new p5(sketch1, document.getElementById('canvas1')));
+        else if (stepIdx === 1) p5Instances.push(new p5(sketch2, document.getElementById('canvas2')));
+        else if (stepIdx === 2) p5Instances.push(new p5(sketch3, document.getElementById('canvas3')));
+        else if (stepIdx === 3) p5Instances.push(new p5(sketch4, document.getElementById('canvas4')));
+
+        // Setup local step equation rendering
+        renderLocalState(stepIdx);
+
+        // Update overall controls in DOM
+        document.getElementById('prevStepBtn').disabled = stepIdx === 0;
+        document.getElementById('nextStepBtn').disabled = stepIdx === TOTAL_STEPS - 1;
+        document.getElementById('topStepIndicator').innerText = `Step ${stepIdx + 1} of ${TOTAL_STEPS}`;
+        
+        // Step navigation dots
+        const dots = document.querySelectorAll('.dot-main');
+        dots.forEach((d, i) => {
+            if (i === stepIdx) d.classList.add('active');
+            else d.classList.remove('active');
+        });
+    }
+
+    function renderLocalState(stepIdx) {
+        const stateIdx = stepStates[stepIdx].current;
+        const totalStates = stepStates[stepIdx].total;
+
+        // Render current Equation
+        const eqContainer = document.getElementById(`eq${stepIdx + 1}`);
+        safeRenderKatex(formulas[stepIdx][stateIdx], eqContainer);
+
+        // Update narrative description text
+        const descContainer = document.getElementById(`desc${stepIdx + 1}`);
+        if (descContainer) {
+            descContainer.innerHTML = descriptions[stepIdx][stateIdx];
+            safeAutoRender(descContainer); // Trigger math delimiters formatting auto-render
+        }
+
+        // Render mini navigation sub dots
+        const dotsContainer = document.getElementById(`dots${stepIdx + 1}`);
+        dotsContainer.innerHTML = '';
+        for (let s = 0; s < totalStates; s++) {
+            const dot = document.createElement('div');
+            dot.className = `dot ${s === stateIdx ? 'active' : ''}`;
+            dotsContainer.appendChild(dot);
+        }
+
+        // Setup Button statuses
+        document.getElementById(`prevState${stepIdx + 1}`).disabled = stateIdx === 0;
+        document.getElementById(`nextState${stepIdx + 1}`).disabled = stateIdx === totalStates - 1;
+    }
+
+    function changeLocalState(stepIdx, direction) {
+        stepStates[stepIdx].current = Math.min(
+            Math.max(0, stepStates[stepIdx].current + direction),
+            stepStates[stepIdx].total - 1
+        );
+        renderLocalState(stepIdx);
+    }
+
+    // --- DIVIDER RESIZE HANDLER ---
+
+    document.querySelectorAll('.step-container').forEach(container => {
+        const divider = container.querySelector('.divider');
+        if (!divider) return;
+
+        divider.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            divider.setPointerCapture(e.pointerId);
+            divider.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+
+            const onPointerMove = (moveEvt) => {
+                const rect = container.getBoundingClientRect();
+                const relativeX = moveEvt.clientX - rect.left;
+                let pct = (relativeX / rect.width) * 100;
+                pct = Math.min(Math.max(pct, 30), 80); // clamp bounds
+
+                container.style.setProperty('--visual-w', `${pct}%`);
+                
+                // Immediately call current active p5 resize hook
+                p5Instances.forEach(inst => {
+                    const activeHost = container.querySelector('.visual-host');
+                    if (activeHost) {
+                        inst.resizeCanvas(activeHost.clientWidth, activeHost.clientHeight);
+                    }
+                });
+            };
+
+            const onPointerUp = (upEvt) => {
+                divider.releasePointerCapture(upEvt.pointerId);
+                divider.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                container.removeEventListener('pointermove', onPointerMove);
+                container.removeEventListener('pointerup', onPointerUp);
+            };
+
+            container.addEventListener('pointermove', onPointerMove);
+            container.addEventListener('pointerup', onPointerUp);
+        });
+    });
+
+    // Initialize Main navigation indicators
+    const dotsMainContainer = document.getElementById('mainStepDots');
+    for (let m = 0; m < TOTAL_STEPS; m++) {
+        const dot = document.createElement('div');
+        dot.className = `dot-main ${m === currentStep ? 'active' : ''}`;
+        dot.addEventListener('click', () => {
+            currentStep = m;
+            initStep(currentStep);
+        });
+        dotsMainContainer.appendChild(dot);
+    }
+
+    // Footers Event Bindings
+    document.getElementById('prevStepBtn').addEventListener('click', () => {
+        if (currentStep > 0) {
+            currentStep--;
+            initStep(currentStep);
+        }
+    });
+
+    document.getElementById('nextStepBtn').addEventListener('click', () => {
+        if (currentStep < TOTAL_STEPS - 1) {
+            currentStep++;
+            initStep(currentStep);
+        }
+    });
+
+    // Sub step binding setup dynamically
+    for (let step = 0; step < TOTAL_STEPS; step++) {
+        document.getElementById(`prevState${step + 1}`).addEventListener('click', () => {
+            changeLocalState(step, -1);
+        });
+        document.getElementById(`nextState${step + 1}`).addEventListener('click', () => {
+            changeLocalState(step, 1);
+        });
+    }
+
+    // Keyboard global listeners
+    window.addEventListener('keydown', (e) => {
+        if (e.shiftKey) {
+            if (e.key === 'ArrowRight' && currentStep < TOTAL_STEPS - 1) {
+                currentStep++;
+                initStep(currentStep);
+            } else if (e.key === 'ArrowLeft' && currentStep > 0) {
+                currentStep--;
+                initStep(currentStep);
+            }
+        } else {
+            if (e.key === 'ArrowRight') {
+                changeLocalState(currentStep, 1);
+            } else if (e.key === 'ArrowLeft') {
+                changeLocalState(currentStep, -1);
+            }
+        }
+    });
+
+    // Setup window generic resize listener
+    window.addEventListener('resize', () => {
+        p5Instances.forEach(inst => {
+            const host = document.querySelector('.step-container.active .visual-host');
+            if (host) inst.resizeCanvas(host.clientWidth, host.clientHeight);
+        });
+    });
+
+    // Launch Step 1
+    initStep(currentStep);
+</script>
+
+</body>
+</html>

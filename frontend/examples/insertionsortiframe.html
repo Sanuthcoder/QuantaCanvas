@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualizing Insertion Sort</title>
+  
+  <!-- GSAP Animation Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+  <!-- KaTeX CDN Files -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    /* Catppuccin Mocha Palette variables */
+    :root {
+      --bg: #1e1e2e;
+      --panel: #252538;
+      --text: #cdd6f4;
+      --muted: #6c7086;
+      --grid: #45475a;
+      --axis: #bac2de;
+      --accent1: #89b4fa; /* Blue: Unsorted/neutral */
+      --accent2: #f5c2e7; /* Pink: Key element */
+      --accent3: #a6e3a1; /* Green: Sorted element */
+      --hover: #f9e2af;   /* Yellow: Active Comparison/Insert */
+      --visual-w: 55%;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* Outer layout structure */
+    .app-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .app-header {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.8rem 1.5rem;
+      border-bottom: 1px solid var(--grid);
+      background-color: #181825;
+    }
+
+    .app-header h1 {
+      font-size: 1.25rem;
+      margin: 0;
+      color: var(--accent1);
+      font-weight: 700;
+    }
+
+    .step-dots {
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .step-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--grid);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .step-dot.active {
+      background-color: var(--accent1);
+      transform: scale(1.25);
+    }
+
+    .step-stage {
+      flex: 1 1 0;
+      min-height: 0;
+      min-width: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .step {
+      display: none;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .step.active {
+      display: grid;
+    }
+
+    /* Split column layouts */
+    [data-layout="split"] {
+      grid-template-columns: var(--visual-w, 55%) 6px minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+      height: 100%;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .pane {
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .visual-pane {
+      background-color: #11111b;
+    }
+
+    .visual-container {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .eq-pane {
+      background-color: var(--bg);
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 1rem;
+    }
+
+    .pane-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      min-height: 0;
+    }
+
+    .pane-content h2 {
+      font-size: 1.35rem;
+      color: var(--accent1);
+      margin: 0 0 0.2rem 0;
+    }
+
+    .pane-content p {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--text);
+      margin: 0;
+    }
+
+    .pane-content p strong {
+      color: var(--hover);
+    }
+
+    .caption {
+      font-size: 0.85rem !important;
+      color: var(--muted) !important;
+      font-style: italic;
+    }
+
+    /* Equation panel wrappers */
+    .eq-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      background-color: var(--panel);
+      border-radius: 8px;
+      padding: 0.8rem;
+      box-sizing: border-box;
+    }
+
+    .eq-state {
+      display: inline-block;
+      white-space: nowrap;
+      min-width: max-content;
+      font-size: clamp(0.95rem, 1.8vw, 1.5rem);
+      color: var(--accent2);
+    }
+
+    /* Resizable divider style */
+    .divider {
+      width: 6px;
+      height: 100%;
+      cursor: col-resize;
+      background-color: var(--grid);
+      position: relative;
+      transition: background-color 0.2s ease;
+      z-index: 10;
+    }
+
+    .divider::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 2px;
+      width: 2px;
+      background-color: var(--accent1);
+      opacity: 0.3;
+      transition: opacity 0.2s ease;
+    }
+
+    .divider:hover, .divider.dragging {
+      background-color: var(--hover);
+    }
+
+    .divider:hover::after, .divider.dragging::after {
+      opacity: 1;
+    }
+
+    /* App footer step controls */
+    .app-footer {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.8rem 1.5rem;
+      border-top: 1px solid var(--grid);
+      background-color: #181825;
+    }
+
+    .nav-btn {
+      background-color: var(--panel);
+      border: 1px solid var(--grid);
+      color: var(--text);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      background-color: var(--grid);
+      border-color: var(--accent1);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .step-indicator {
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* Live Pseudocode Highlight Rules */
+    .pseudocode-container {
+      background-color: #11111b;
+      border-radius: 8px;
+      padding: 0.8rem;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      color: var(--text);
+      border-left: 4px solid var(--grid);
+    }
+
+    .code-line {
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .code-line.active {
+      background-color: var(--grid);
+      border-left: 3px solid var(--accent2);
+      color: var(--hover);
+      font-weight: bold;
+    }
+
+    .indent-1 { padding-left: 1.25rem; }
+    .indent-2 { padding-left: 2.5rem; }
+
+    /* Simulator Micro-controls styling */
+    .sim-controls {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background-color: var(--panel);
+      border: 1px solid var(--grid);
+      color: var(--text);
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      background-color: var(--grid);
+      border-color: var(--hover);
+    }
+
+    .btn-primary {
+      background-color: var(--accent1);
+      color: var(--bg);
+      border-color: var(--accent1);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--hover);
+      color: var(--bg);
+      border-color: var(--hover);
+    }
+
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .sim-progress {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .sim-desc {
+      font-size: 0.9rem;
+      color: var(--text);
+      font-style: italic;
+      min-height: 2.2rem;
+    }
+
+    /* Scrollbars styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--grid);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <header class="app-header">
+    <h1>Visualizing Insertion Sort</h1>
+    <div class="step-dots" id="step-dots"></div>
+  </header>
+  
+  <main class="step-stage">
+
+    <!-- STEP 1: The Core Idea -->
+    <div class="step" data-step="1" data-layout="split">
+      <div class="pane visual-pane">
+        <div class="visual-container" id="visual1"></div>
+      </div>
+      <div class="divider" role="separator"></div>
+      <div class="pane eq-pane">
+        <div class="pane-content">
+          <h2>1. The Core Idea</h2>
+          <p><strong>Insertion Sort</strong> works similarly to how you would organize playing cards in your hand.</p>
+          <p>It splits the collection conceptually into a <strong>sorted subset</strong> on the left and an <strong>unsorted subset</strong> on the right.</p>
+          <div class="eq-wrap">
+            <div class="eq-state" id="eq1"></div>
+          </div>
+          <p class="caption">Initially, the first element (index $0$) is sorted by default because a single-element list is always sorted.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: The Key Element -->
+    <div class="step" data-step="2" data-layout="split">
+      <div class="pane visual-pane">
+        <div class="visual-container" id="visual2"></div>
+      </div>
+      <div class="divider" role="separator"></div>
+      <div class="pane eq-pane">
+        <div class="pane-content">
+          <h2>2. The "Key" Element</h2>
+          <p>For each position, we pick the first unsorted item as our <strong>Key</strong> (highlighted in pink).</p>
+          <p>We extract this Key and scan the sorted items to its left, moving right-to-left, looking for where this Key belongs.</p>
+          <div class="eq-wrap">
+            <div class="eq-state" id="eq2"></div>
+          </div>
+          <p class="caption">Here, the Key is $2$. Since $2 < 5$, the Key is smaller and must find a place before $5$. We must make space.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Shifting Elements -->
+    <div class="step" data-step="3" data-layout="split">
+      <div class="pane visual-pane">
+        <div class="visual-container" id="visual3"></div>
+      </div>
+      <div class="divider" role="separator"></div>
+      <div class="pane eq-pane">
+        <div class="pane-content">
+          <h2>3. Shifting Elements Right</h2>
+          <p>To insert our Key, any sorted item that is larger than the Key must be <strong>shifted</strong> one position to the right.</p>
+          <p>This shifting sequence clears an available slot near the beginning of the list.</p>
+          <div class="eq-wrap">
+            <div class="eq-state" id="eq3"></div>
+          </div>
+          <p class="caption">The value $5$ shifts into the position previously occupied by $2$, creating an opening at index $0$.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Insertion -->
+    <div class="step" data-step="4" data-layout="split">
+      <div class="pane visual-pane">
+        <div class="visual-container" id="visual4"></div>
+      </div>
+      <div class="divider" role="separator"></div>
+      <div class="pane eq-pane">
+        <div class="pane-content">
+          <h2>4. Inserting the Key</h2>
+          <p>Once all larger elements are shifted, we <strong>insert</strong> the Key into its correct destination slot.</p>
+          <div class="eq-wrap">
+            <div class="eq-state" id="eq4"></div>
+          </div>
+          <p class="caption">With $2$ successfully placed at index $0$, our sorted subset grows to encompass $[2, 5]$.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Live Interactive Simulator -->
+    <div class="step" data-step="5" data-layout="split">
+      <div class="pane visual-pane">
+        <div class="visual-container" id="visual5"></div>
+      </div>
+      <div class="divider" role="separator"></div>
+      <div class="pane eq-pane">
+        <div class="pane-content" style="gap: 0.5rem;">
+          <h2>5. Live Algorithm Simulator</h2>
+          <p>Step through or play the complete algorithm to watch insertion sort build order on custom patterns.</p>
+          
+          <div class="pseudocode-container">
+            <div class="code-line" data-line="1">for i = 1 to n-1</div>
+            <div class="code-line indent-1" data-line="2">key = A[i]</div>
+            <div class="code-line indent-1" data-line="3">j = i - 1</div>
+            <div class="code-line indent-1" data-line="4">while j &ge; 0 and A[j] &gt; key</div>
+            <div class="code-line indent-2" data-line="5">A[j+1] = A[j]</div>
+            <div class="code-line indent-2" data-line="6">j = j - 1</div>
+            <div class="code-line indent-1" data-line="7">A[j+1] = key</div>
+          </div>
+
+          <div class="sim-controls">
+            <button id="sim-prev-btn" class="btn">◀ Back</button>
+            <button id="sim-play-btn" class="btn btn-primary">Play</button>
+            <button id="sim-next-btn" class="btn">Forward ▶</button>
+            <button id="sim-reset-btn" class="btn">Reset</button>
+            <button id="sim-random-btn" class="btn">Randomize</button>
+          </div>
+          <div class="sim-progress" id="sim-progress-text">State: 0 / 0</div>
+          <div class="sim-desc" id="sim-desc-text">Ready to sort.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+  
+  <footer class="app-footer">
+    <button id="prev-step-btn" class="nav-btn">◀ Previous Lesson Step</button>
+    <div id="step-indicator" class="step-indicator">Step 1 of 5</div>
+    <button id="next-step-btn" class="nav-btn">Next Lesson Step ▶</button>
+  </footer>
+</div>
+
+<script>
+  let currentStepNum = 1;
+
+  // General draw helper for arrays using clean SVG inside containers
+  function drawArray(container, arr, options = {}) {
+    container.innerHTML = '';
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    const n = arr.length;
+    
+    const padding = 20;
+    const availableW = w - padding * 2;
+    const barW = Math.min(60, availableW / (n * 1.4));
+    const gap = barW * 0.4;
+    const startX = (w - (n * barW + (n - 1) * gap)) / 2;
+    
+    const maxVal = Math.max(...arr, 6);
+    const maxBarH = h * 0.5;
+    const baseLineY = h * 0.7;
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", "100%");
+    svg.setAttribute("height", "100%");
+    container.appendChild(svg);
+
+    arr.forEach((val, i) => {
+      const barH = (val / maxVal) * maxBarH;
+      const x = startX + i * (barW + gap);
+      const y = baseLineY - barH;
+
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", "bar-group");
+      g.setAttribute("data-index", i);
+
+      let fill = "var(--accent1)"; // Unsorted default
+      
+      if (options.sortedCount !== undefined && i < options.sortedCount) {
+        fill = "var(--accent3)"; // Sorted
+      }
+      if (options.keyIndex !== undefined && i === options.keyIndex) {
+        fill = "var(--accent2)"; // Key
+      }
+      if (options.compareIndex !== undefined && i === options.compareIndex) {
+        fill = "var(--hover)"; // Current comparison target
+      }
+
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", x);
+      rect.setAttribute("y", y);
+      rect.setAttribute("width", barW);
+      rect.setAttribute("height", barH);
+      rect.setAttribute("rx", 6);
+      rect.setAttribute("fill", fill);
+      g.appendChild(rect);
+
+      const valText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      valText.setAttribute("x", x + barW / 2);
+      valText.setAttribute("y", y - 10);
+      valText.setAttribute("text-anchor", "middle");
+      valText.setAttribute("fill", "var(--text)");
+      valText.setAttribute("font-size", "14px");
+      valText.setAttribute("font-weight", "bold");
+      valText.textContent = val;
+      g.appendChild(valText);
+
+      const idxText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      idxText.setAttribute("x", x + barW / 2);
+      idxText.setAttribute("y", baseLineY + 25);
+      idxText.setAttribute("text-anchor", "middle");
+      idxText.setAttribute("fill", "var(--muted)");
+      idxText.setAttribute("font-size", "12px");
+      idxText.textContent = `[${i}]`;
+      g.appendChild(idxText);
+
+      svg.appendChild(g);
+    });
+
+    if (options.partitionAfter !== undefined) {
+      const x = startX + (options.partitionAfter + 1) * (barW + gap) - gap / 2;
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", x);
+      line.setAttribute("y1", baseLineY - maxBarH - 20);
+      line.setAttribute("x2", x);
+      line.setAttribute("y2", baseLineY + 40);
+      line.setAttribute("stroke", "var(--accent2)");
+      line.setAttribute("stroke-width", "2");
+      line.setAttribute("stroke-dasharray", "4,4");
+      svg.appendChild(line);
+
+      const labelS = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      labelS.setAttribute("x", x - 10);
+      labelS.setAttribute("y", baseLineY - maxBarH - 30);
+      labelS.setAttribute("text-anchor", "end");
+      labelS.setAttribute("fill", "var(--accent3)");
+      labelS.setAttribute("font-size", "11px");
+      labelS.textContent = "SORTED";
+      svg.appendChild(labelS);
+
+      const labelU = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      labelU.setAttribute("x", x + 10);
+      labelU.setAttribute("y", baseLineY - maxBarH - 30);
+      labelU.setAttribute("text-anchor", "start");
+      labelU.setAttribute("fill", "var(--accent1)");
+      labelU.setAttribute("font-size", "11px");
+      labelU.textContent = "UNSORTED";
+      svg.appendChild(labelU);
+    }
+  }
+
+  // Animation Builders per step
+  function setupStep2(container) {
+    const arr = [5, 2, 4, 6, 1, 3];
+    drawArray(container, arr, { sortedCount: 1, keyIndex: 1 });
+    const svg = container.querySelector('svg');
+    if (!svg) return;
+    const groups = svg.querySelectorAll('.bar-group');
+    const keyGroup = groups[1];
+    if (keyGroup) {
+      gsap.fromTo(keyGroup, 
+        { y: 0 },
+        { y: -30, duration: 1.2, ease: "power2.inOut", repeat: -1, yoyo: true }
+      );
+    }
+  }
+
+  function setupStep3(container) {
+    const arr = [5, 2, 4, 6, 1, 3];
+    drawArray(container, arr, { sortedCount: 1, keyIndex: 1 });
+    const svg = container.querySelector('svg');
+    if (!svg) return;
+    const groups = svg.querySelectorAll('.bar-group');
+    
+    // float the key slightly to signify it's active in memory
+    const keyGroup = groups[1];
+    gsap.set(keyGroup, { y: -45, opacity: 0.6 });
+
+    // Animate shifting 5 into the index 1 slot
+    const shiftGroup = groups[0];
+    const rect0 = groups[0].querySelector('rect');
+    const rect1 = groups[1].querySelector('rect');
+    const x0 = parseFloat(rect0.getAttribute('x'));
+    const x1 = parseFloat(rect1.getAttribute('x'));
+    const deltaX = x1 - x0;
+
+    gsap.fromTo(shiftGroup,
+      { x: 0 },
+      { x: deltaX, duration: 1.5, ease: "power2.inOut", repeat: -1, repeatDelay: 0.4 }
+    );
+  }
+
+  function setupStep4(container) {
+    const arr = [5, 5, 4, 6, 1, 3];
+    drawArray(container, arr, { sortedCount: 0 });
+    
+    const svg = container.querySelector('svg');
+    if (!svg) return;
+    const groups = svg.querySelectorAll('.bar-group');
+    
+    // Convert first slot style to background-like to show opening
+    const emptyRect = groups[0].querySelector('rect');
+    emptyRect.setAttribute('fill', 'var(--grid)');
+    groups[0].querySelector('text').textContent = ''; 
+
+    // Create a temporary floating Key element to drop in visually
+    const keyVal = 2;
+    const x0 = parseFloat(emptyRect.getAttribute('x'));
+    const barW = parseFloat(emptyRect.getAttribute('width'));
+    const maxBarH = container.clientHeight * 0.5;
+    const baseLineY = container.clientHeight * 0.7;
+    const barH = (keyVal / 6) * maxBarH;
+    const y0 = baseLineY - barH;
+
+    const floatGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rect.setAttribute("x", x0);
+    rect.setAttribute("y", y0);
+    rect.setAttribute("width", barW);
+    rect.setAttribute("height", barH);
+    rect.setAttribute("rx", 6);
+    rect.setAttribute("fill", "var(--accent2)");
+    floatGroup.appendChild(rect);
+
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute("x", x0 + barW / 2);
+    text.setAttribute("y", y0 - 10);
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("fill", "var(--text)");
+    text.setAttribute("font-size", "14px");
+    text.setAttribute("font-weight", "bold");
+    text.textContent = keyVal;
+    floatGroup.appendChild(text);
+
+    svg.appendChild(floatGroup);
+
+    gsap.fromTo(floatGroup,
+      { y: -80, opacity: 0.3 },
+      {
+        y: 0,
+        opacity: 1,
+        duration: 1.5,
+        ease: "bounce.out",
+        repeat: -1,
+        repeatDelay: 0.5,
+        onRepeat: () => {
+          rect.setAttribute("fill", "var(--accent2)");
+        },
+        onUpdate: function() {
+          if (this.progress() > 0.55) {
+            rect.setAttribute("fill", "var(--accent3)"); // turns green on land
+          }
+        }
+      }
+    );
+  }
+
+  // Live simulator state engine
+  function generateStates(initialArray) {
+    const states = [];
+    const A = [...initialArray];
+    const n = A.length;
+    
+    states.push({
+      array: [...A],
+      line: 1,
+      i: 1,
+      j: -1,
+      key: null,
+      description: "Simulator started. Ready to loop from index i = 1.",
+      sortedCount: 1
+    });
+
+    for (let i = 1; i < n; i++) {
+      const key = A[i];
+      states.push({
+        array: [...A],
+        line: 1,
+        i,
+        j: i - 1,
+        key,
+        description: `Loop iteration: Target index ${i} (value ${key}) to evaluate.`,
+        sortedCount: i,
+        keyIndex: i
+      });
+
+      states.push({
+        array: [...A],
+        line: 2,
+        i,
+        j: i - 1,
+        key,
+        description: `Designating key = ${key}.`,
+        sortedCount: i,
+        keyIndex: i
+      });
+
+      let j = i - 1;
+      states.push({
+        array: [...A],
+        line: 3,
+        i,
+        j,
+        key,
+        description: `Set pointer j = ${j} (value ${A[j]}) to start left-to-right scans.`,
+        sortedCount: i,
+        compareIndex: j
+      });
+
+      while (j >= 0 && A[j] > key) {
+        states.push({
+          array: [...A],
+          line: 4,
+          i,
+          j,
+          key,
+          description: `Compare condition met: ${A[j]} > ${key}. Shifting required.`,
+          sortedCount: i,
+          compareIndex: j
+        });
+
+        A[j + 1] = A[j];
+        j--;
+
+        states.push({
+          array: [...A],
+          line: 5,
+          i,
+          j,
+          key,
+          description: `Shifted value to position ${j + 2}.`,
+          sortedCount: i,
+          compareIndex: j
+        });
+
+        states.push({
+          array: [...A],
+          line: 6,
+          i,
+          j,
+          key,
+          description: `Decremented pointer j. Now scanning index ${j}.`,
+          sortedCount: i
+        });
+      }
+
+      if (j >= 0) {
+        states.push({
+          array: [...A],
+          line: 4,
+          i,
+          j,
+          key,
+          description: `Scan boundary hit: ${A[j]} <= ${key}. No more shifts needed.`,
+          sortedCount: i,
+          compareIndex: j
+        });
+      } else {
+        states.push({
+          array: [...A],
+          line: 4,
+          i,
+          j,
+          key,
+          description: "Reached left end of array. Stop shifting.",
+          sortedCount: i
+        });
+      }
+
+      A[j + 1] = key;
+      states.push({
+        array: [...A],
+        line: 7,
+        i,
+        j,
+        key,
+        description: `Inserted Key (${key}) successfully into position ${j + 1}.`,
+        sortedCount: i + 1,
+        insertedIndex: j + 1
+      });
+    }
+
+    states.push({
+      array: [...A],
+      line: 7,
+      i: n,
+      j: -1,
+      key: null,
+      description: "Sorting complete! The entire list is now ordered.",
+      sortedCount: n
+    });
+
+    return states;
+  }
+
+  function drawSimulationState(container, state) {
+    container.innerHTML = '';
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    const arr = state.array;
+    const n = arr.length;
+    
+    const padding = 20;
+    const availableW = w - padding * 2;
+    const barW = Math.min(60, availableW / (n * 1.4));
+    const gap = barW * 0.4;
+    const startX = (w - (n * barW + (n - 1) * gap)) / 2;
+    
+    const maxVal = 10; 
+    const maxBarH = h * 0.45;
+    const baseLineY = h * 0.65;
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", "100%");
+    svg.setAttribute("height", "100%");
+    container.appendChild(svg);
+
+    // Render Key Box indicator if in memory
+    if (state.key !== null && state.line >= 2 && state.line < 7) {
+      const kBox = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      const kx = w / 2 - 40;
+      const ky = 20;
+
+      const kRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      kRect.setAttribute("x", kx);
+      kRect.setAttribute("y", ky);
+      kRect.setAttribute("width", 80);
+      kRect.setAttribute("height", 40);
+      kRect.setAttribute("rx", 6);
+      kRect.setAttribute("fill", "var(--accent2)");
+      kBox.appendChild(kRect);
+
+      const kLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      kLabel.setAttribute("x", kx + 40);
+      kLabel.setAttribute("y", ky + 15);
+      kLabel.setAttribute("text-anchor", "middle");
+      kLabel.setAttribute("fill", "var(--bg)");
+      kLabel.setAttribute("font-size", "10px");
+      kLabel.setAttribute("font-weight", "bold");
+      kLabel.textContent = "KEY IN HAND";
+      kBox.appendChild(kLabel);
+
+      const kVal = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      kVal.setAttribute("x", kx + 40);
+      kVal.setAttribute("y", ky + 33);
+      kVal.setAttribute("text-anchor", "middle");
+      kVal.setAttribute("fill", "var(--bg)");
+      kVal.setAttribute("font-size", "16px");
+      kVal.setAttribute("font-weight", "bold");
+      kVal.textContent = state.key;
+      kBox.appendChild(kVal);
+
+      svg.appendChild(kBox);
+    }
+
+    arr.forEach((val, i) => {
+      const barH = (val / maxVal) * maxBarH;
+      const x = startX + i * (barW + gap);
+      const y = baseLineY - barH;
+
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", "bar-group");
+
+      let fill = "var(--accent1)";
+      if (i < state.sortedCount) {
+        fill = "var(--accent3)"; // Sorted portion
+      }
+      if (state.keyIndex !== undefined && i === state.keyIndex && state.line < 3) {
+        fill = "var(--accent2)"; // Active key visual
+      }
+      if (state.compareIndex !== undefined && i === state.compareIndex) {
+        fill = "var(--hover)"; // Scanning target
+      }
+      if (state.insertedIndex !== undefined && i === state.insertedIndex) {
+        fill = "var(--hover)"; // Moment of drop
+      }
+
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", x);
+      rect.setAttribute("y", y);
+      rect.setAttribute("width", barW);
+      rect.setAttribute("height", barH);
+      rect.setAttribute("rx", 6);
+      rect.setAttribute("fill", fill);
+      g.appendChild(rect);
+
+      const valText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      valText.setAttribute("x", x + barW / 2);
+      valText.setAttribute("y", y - 10);
+      valText.setAttribute("text-anchor", "middle");
+      valText.setAttribute("fill", "var(--text)");
+      valText.setAttribute("font-size", "14px");
+      valText.setAttribute("font-weight", "bold");
+      valText.textContent = val;
+      g.appendChild(valText);
+
+      const idxText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      idxText.setAttribute("x", x + barW / 2);
+      idxText.setAttribute("y", baseLineY + 25);
+      idxText.setAttribute("text-anchor", "middle");
+      idxText.setAttribute("fill", "var(--muted)");
+      idxText.setAttribute("font-size", "12px");
+      idxText.textContent = `[${i}]`;
+      g.appendChild(idxText);
+
+      svg.appendChild(g);
+    });
+
+    const pCount = state.sortedCount;
+    if (pCount > 0 && pCount < n) {
+      const x = startX + pCount * (barW + gap) - gap / 2;
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", x);
+      line.setAttribute("y1", baseLineY - maxBarH - 10);
+      line.setAttribute("x2", x);
+      line.setAttribute("y2", baseLineY + 30);
+      line.setAttribute("stroke", "var(--muted)");
+      line.setAttribute("stroke-width", "1.5");
+      line.setAttribute("stroke-dasharray", "3,3");
+      svg.appendChild(line);
+    }
+  }
+
+  // Microstate control system
+  window.simArray = [6, 2, 8, 3, 1, 7];
+  window.simStates = [];
+  window.simIndex = 0;
+  window.simState = null;
+  window.simPlaying = false;
+  window.simInterval = null;
+
+  function updateSimUI() {
+    const state = window.simStates[window.simIndex];
+    window.simState = state;
+    
+    const container = document.getElementById('visual5');
+    if (container) {
+      drawSimulationState(container, state);
+    }
+
+    document.querySelectorAll('.code-line').forEach(line => line.classList.remove('active'));
+    const activeCode = document.querySelector(`.code-line[data-line="${state.line}"]`);
+    if (activeCode) {
+      activeCode.classList.add('active');
+    }
+
+    document.getElementById('sim-progress-text').textContent = `State: ${window.simIndex + 1} / ${window.simStates.length}`;
+    document.getElementById('sim-desc-text').textContent = state.description;
+
+    document.getElementById('sim-prev-btn').disabled = (window.simIndex === 0);
+    document.getElementById('sim-next-btn').disabled = (window.simIndex === window.simStates.length - 1);
+  }
+
+  function stepSimForward() {
+    if (window.simIndex < window.simStates.length - 1) {
+      window.simIndex++;
+      updateSimUI();
+    }
+  }
+
+  function stepSimBack() {
+    if (window.simIndex > 0) {
+      window.simIndex--;
+      updateSimUI();
+    }
+  }
+
+  function toggleSimAutoplay() {
+    const playBtn = document.getElementById('sim-play-btn');
+    if (window.simPlaying) {
+      stopSimAutoplay();
+    } else {
+      window.simPlaying = true;
+      playBtn.textContent = "Pause";
+      playBtn.classList.remove('btn-primary');
+      playBtn.classList.add('btn-secondary');
+      
+      window.simInterval = setInterval(() => {
+        if (window.simIndex < window.simStates.length - 1) {
+          stepSimForward();
+        } else {
+          stopSimAutoplay();
+        }
+      }, 1000);
+    }
+  }
+
+  function stopSimAutoplay() {
+    window.simPlaying = false;
+    const playBtn = document.getElementById('sim-play-btn');
+    if (playBtn) {
+      playBtn.textContent = "Play";
+      playBtn.classList.add('btn-primary');
+      playBtn.classList.remove('btn-secondary');
+    }
+    if (window.simInterval) {
+      clearInterval(window.simInterval);
+      window.simInterval = null;
+    }
+  }
+
+  function resetSim() {
+    window.simIndex = 0;
+    updateSimUI();
+  }
+
+  function randomizeSimArray() {
+    const random = [];
+    for (let i = 0; i < 6; i++) {
+      random.push(Math.floor(Math.random() * 9) + 1);
+    }
+    window.simArray = random;
+    window.simStates = generateStates(window.simArray);
+    window.simIndex = 0;
+    updateSimUI();
+  }
+
+  function setupStep5(container) {
+    window.simStates = generateStates(window.simArray);
+    window.simIndex = 0;
+    updateSimUI();
+
+    // Safely rebind buttons (prevent memory leak duplicates)
+    const prev = document.getElementById('sim-prev-btn');
+    const next = document.getElementById('sim-next-btn');
+    const play = document.getElementById('sim-play-btn');
+    const reset = document.getElementById('sim-reset-btn');
+    const random = document.getElementById('sim-random-btn');
+
+    prev.replaceWith(prev.cloneNode(true));
+    next.replaceWith(next.cloneNode(true));
+    play.replaceWith(play.cloneNode(true));
+    reset.replaceWith(reset.cloneNode(true));
+    random.replaceWith(random.cloneNode(true));
+
+    document.getElementById('sim-prev-btn').addEventListener('click', () => { stopSimAutoplay(); stepSimBack(); });
+    document.getElementById('sim-next-btn').addEventListener('click', () => { stopSimAutoplay(); stepSimForward(); });
+    document.getElementById('sim-play-btn').addEventListener('click', toggleSimAutoplay);
+    document.getElementById('sim-reset-btn').addEventListener('click', () => { stopSimAutoplay(); resetSim(); });
+    document.getElementById('sim-random-btn').addEventListener('click', () => { stopSimAutoplay(); randomizeSimArray(); });
+  }
+
+  // Steps Definition and Lifecycle Map
+  const steps = {
+    1: {
+      init: (c) => {
+        drawArray(c, [5, 2, 4, 6, 1, 3], { partitionAfter: 0 });
+        safeRenderKatex("A[0 \\dots i-1] \\quad \\text{is sorted, and we want to insert} \\quad A[i] \\text{ where } i=1", document.getElementById('eq1'));
+      },
+      resize: (c) => drawArray(c, [5, 2, 4, 6, 1, 3], { partitionAfter: 0 }),
+      destroy: () => {}
+    },
+    2: {
+      init: (c) => {
+        setupStep2(c);
+        safeRenderKatex("\\text{Key} = A[1] = 2 \\quad \\Rightarrow \\quad \\text{Compare key with sorted index } 0", document.getElementById('eq2'));
+      },
+      resize: (c) => setupStep2(c),
+      destroy: () => gsap.killTweensOf('*')
+    },
+    3: {
+      init: (c) => {
+        setupStep3(c);
+        safeRenderKatex("A[j+1] = A[j] \\quad \\text{since } A[0] > \\text{key} \\quad (5 > 2)", document.getElementById('eq3'));
+      },
+      resize: (c) => setupStep3(c),
+      destroy: () => gsap.killTweensOf('*')
+    },
+    4: {
+      init: (c) => {
+        setupStep4(c);
+        safeRenderKatex("A[j+1] = \\text{Key} \\quad \\Rightarrow \\quad A[0] = 2", document.getElementById('eq4'));
+      },
+      resize: (c) => setupStep4(c),
+      destroy: () => gsap.killTweensOf('*')
+    },
+    5: {
+      init: (c) => setupStep5(c),
+      resize: (c) => {
+        if (window.simState) drawSimulationState(c, window.simState);
+      },
+      destroy: () => stopSimAutoplay()
+    }
+  };
+
+  // Main UI Navigation Logic
+  function showStep(num) {
+    if (steps[currentStepNum] && steps[currentStepNum].destroy) {
+      steps[currentStepNum].destroy();
+    }
+
+    document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
+    const activeStepEl = document.querySelector(`.step[data-step="${num}"]`);
+    if (activeStepEl) {
+      activeStepEl.classList.add('active');
+    }
+
+    currentStepNum = num;
+
+    const visualContainer = document.getElementById(`visual${num}`);
+    if (visualContainer && steps[num]) {
+      steps[num].init(visualContainer);
+    }
+
+    // Call auto render for local LaTeX inside instructions
+    safeAutoRender(activeStepEl);
+
+    updateHeaderDots();
+    document.getElementById('step-indicator').textContent = `Step ${num} of 5`;
+    document.getElementById('prev-step-btn').disabled = (num === 1);
+    document.getElementById('next-step-btn').disabled = (num === 5);
+  }
+
+  function updateHeaderDots() {
+    const dotsContainer = document.getElementById('step-dots');
+    dotsContainer.innerHTML = '';
+    for (let i = 1; i <= 5; i++) {
+      const dot = document.createElement('div');
+      dot.className = `step-dot ${i === currentStepNum ? 'active' : ''}`;
+      dot.addEventListener('click', () => showStep(i));
+      dotsContainer.appendChild(dot);
+    }
+  }
+
+  function triggerStepResize(num) {
+    const visualContainer = document.getElementById(`visual${num}`);
+    if (visualContainer && steps[num]) {
+      steps[num].resize(visualContainer);
+    }
+  }
+
+  // Draggable Split Divider Logic
+  function initDivider() {
+    document.querySelectorAll('.divider').forEach(divider => {
+      const step = divider.closest('.step');
+      divider.addEventListener('pointerdown', function(e) {
+        e.preventDefault();
+        divider.setPointerCapture(e.pointerId);
+        divider.classList.add('dragging');
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'col-resize';
+        
+        const onPointerMove = (evt) => {
+          const rect = step.getBoundingClientRect();
+          let pct = ((evt.clientX - rect.left) / rect.width) * 100;
+          pct = Math.max(30, Math.min(80, pct));
+          step.style.setProperty('--visual-w', pct + '%');
+          triggerStepResize(currentStepNum);
+        };
+        
+        const onPointerUp = () => {
+          divider.releasePointerCapture(e.pointerId);
+          divider.classList.remove('dragging');
+          document.body.style.userSelect = '';
+          document.body.style.cursor = '';
+          divider.removeEventListener('pointermove', onPointerMove);
+          divider.removeEventListener('pointerup', onPointerUp);
+          triggerStepResize(currentStepNum);
+        };
+        
+        divider.addEventListener('pointermove', onPointerMove);
+        divider.addEventListener('pointerup', onPointerUp);
+      });
+    });
+  }
+
+  // KaTeX Safe Render Methods
+  function safeRenderKatex(formula, element) {
+    if (!element) return;
+    const cleaned = formula
+      .replace(/^\s*\$\$?|\$\$?\s*$/g, '')
+      .replace(/^\s*\\[\(\[]|\\[\)\]]\s*$/g, '')
+      .trim();
+    const checkExist = setInterval(() => {
+      if (typeof window.katex !== 'undefined') {
+        clearInterval(checkExist);
+        try {
+          window.katex.render(cleaned, element, { throwOnError: false, displayMode: true });
+        } catch (err) { console.error(err); }
+      }
+    }, 50);
+  }
+
+  function safeAutoRender(rootElement) {
+    if (!rootElement) return;
+    const tryRender = setInterval(() => {
+      if (typeof window.renderMathInElement !== 'undefined') {
+        clearInterval(tryRender);
+        window.renderMathInElement(rootElement, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$',  right: '$',  display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError: false,
+          ignoredTags: ['script','noscript','style','textarea','pre','code','option']
+        });
+      }
+    }, 50);
+  }
+
+  // Listeners & Initialization
+  document.addEventListener('DOMContentLoaded', () => {
+    initDivider();
+    showStep(1);
+
+    document.getElementById('prev-step-btn').addEventListener('click', () => {
+      if (currentStepNum > 1) showStep(currentStepNum - 1);
+    });
+
+    document.getElementById('next-step-btn').addEventListener('click', () => {
+      if (currentStepNum < 5) showStep(currentStepNum + 1);
+    });
+
+    window.addEventListener('resize', () => {
+      triggerStepResize(currentStepNum);
+    });
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.shiftKey) {
+        if (e.key === 'ArrowRight' || e.key === 'Right') {
+          if (currentStepNum < 5) showStep(currentStepNum + 1);
+        } else if (e.key === 'ArrowLeft' || e.key === 'Left') {
+          if (currentStepNum > 1) showStep(currentStepNum - 1);
+        }
+      } else {
+        if (e.key === 'ArrowRight' || e.key === 'Right') {
+          if (currentStepNum === 5) { stopSimAutoplay(); stepSimForward(); }
+        } else if (e.key === 'ArrowLeft' || e.key === 'Left') {
+          if (currentStepNum === 5) { stopSimAutoplay(); stepSimBack(); }
+        }
+      }
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>About QuantaCanvas — Why Visual Intuition Matters</title>
+<meta name="description" content="The story behind QuantaCanvas, an AI-powered tool for turning difficult math and science concepts into interactive visualizations." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="About QuantaCanvas" />
+<meta property="og:description" content="The story and philosophy behind QuantaCanvas." />
+<meta name="twitter:card" content="summary_large_image" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="css/styles.css" />
+<link rel="icon" href="/assets/favicon.ico" type="image/x-icon" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Asimovian&display=swap" rel="stylesheet" />
+
+<script>
+  if (localStorage.getItem("qc-theme") === "light") {
+    document.documentElement.classList.add("light");
+  }
+</script>
+</head>
+
+<body>
+
+<header class="site-header">
+  <nav class="nav">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">
+        <img src="assets/logo.png" alt="QuantaCanvas">
+      </span>
+
+      <span
+        class="brand-word"
+        style="font-family:'Asimovian',sans-serif;font-size:24px;font-weight:700;"
+      >
+        Quanta<span class="c">Canvas</span>
+      </span>
+    </a>
+
+    <div class="nav-menu" id="navMenu">
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="examples.html">Examples</a></li>
+      </ul>
+
+      <button
+        class="more-btn"
+        id="moreBtn"
+        aria-label="More menu"
+        aria-expanded="false"
+        type="button"
+      >
+        ⋯
+      </button>
+
+      <ul class="more-menu" id="moreMenu"></ul>
+    </div>
+
+    <div class="nav-right">
+      <button class="icon-btn" data-theme-toggle type="button">☀</button>
+      <a class="btn" href="tool.html">Try it</a>
+    </div>
+  </nav>
+</header>
+
+<main
+  class="wrap-sm"
+  style="
+    width:90%;
+    max-width:1100px;
+    padding-top:80px;
+    padding-bottom:80px;
+  "
+>
+
+  <p
+    class="mono accent"
+    style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;"
+  >
+    About
+  </p>
+
+  <h1
+    style="
+      margin-top:16px;
+      font-size:clamp(32px,5vw,48px);
+      font-weight:600;
+    "
+  >
+    We built QuantaCanvas because
+    <span class="glow-text">understanding shouldn't stop at words.</span>
+  </h1>
+
+
+  <div class="prose" style="margin-top:16px;max-width:1052px;">
+
+    <p>
+      QuantaCanvas was built by two students, Jotham and Sanuth, who kept running into the same problem while learning math, physics, and computer science: sometimes you can read an explanation, understand every sentence, and still not really understand the idea.
+    </p>
+
+    <p>
+      A formula can describe a system perfectly without making that system easy to picture. A diagram can show what something looks like without showing how it changes. And a wall of text can explain a process without ever letting you actually see it happen.
+    </p>
+
+    <p>
+      We started thinking about what learning could look like if, instead of receiving another explanation, you could simply ask for a visual one. Something that moves, responds to you, and is built around the exact question you asked.
+    </p>
+
+    <p>
+      That's the idea behind QuantaCanvas.
+    </p>
+
+  </div>
+
+
+  <div style="margin-top:56px;display:grid;gap:16px;">
+
+    <div class="panel card">
+
+      <h2 style="font-size:18px;font-weight:600;">
+        Understanding is more than reading
+      </h2>
+
+      <p>
+        We don't think explanations are bad. They are incredibly useful.
+        But some concepts become much easier once you can see the
+        relationships between things instead of only reading about them.
+      </p>
+
+    </div>
+
+
+    <div class="panel card">
+
+      <h2 style="font-size:18px;font-weight:600;">
+        Concepts change
+      </h2>
+
+      <p>
+        Many of the ideas students struggle with aren't static. They involve
+        motion, interaction, transformation, approximation, or cause and
+        effect. A visualization can show those changes as they happen rather
+        than leaving the learner to imagine them.
+      </p>
+
+    </div>
+
+
+    <div class="panel card">
+
+      <h2 style="font-size:18px;font-weight:600;">
+        Every question deserves its own visualization
+      </h2>
+
+      <p>
+        QuantaCanvas isn't built around a fixed collection of animations.
+        You describe what you want to understand, and the system generates an
+        interactive visualization around that specific question.
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <div class="panel card" style="margin-top:56px;">
+
+    <p
+      class="mono accent"
+      style="
+        font-size:11px;
+        letter-spacing:.14em;
+        text-transform:uppercase;
+      "
+    >
+      Where it started
+    </p>
+
+    <h2
+      style="
+        margin-top:10px;
+        font-size:24px;
+        font-weight:600;
+      "
+    >
+      From a hackathon idea to something we wanted to keep building
+    </h2>
+
+    <div class="prose" style="margin-top:4px;max-width:1052px;">
+
+      <p>
+        QuantaCanvas began as a project we built for a national-level
+        interschool hackathon. What started as an idea we wanted to experiment
+        with made it all the way to the grand finals, where we eventually
+        finished just short of the win.
+      </p>
+
+      <p>
+        Losing wasn't the end of the project, though. If anything, the
+        experience made us more interested in the problem. We had built
+        something that we genuinely wanted to use ourselves, so we decided
+        to keep improving it beyond the competition.
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <div
+    style="
+      margin-top:56px;
+      padding:40px 0;
+      border-top:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+    "
+  >
+
+    <p
+      class="mono accent"
+      style="
+        font-size:11px;
+        letter-spacing:.14em;
+        text-transform:uppercase;
+      "
+    >
+      Our philosophy
+    </p>
+
+    <h2
+      style="
+        margin-top:12px;
+        font-size:clamp(26px,4vw,38px);
+        line-height:1.2;
+      "
+    >
+      The goal isn't to replace learning.
+      <span class="glow-text">It's to make learning click.</span>
+    </h2>
+
+    <p
+      style="
+        margin-top:18px;
+        max-width:1052px;
+        font-size:16px;
+        line-height:1.75;
+        color:var(--muted-foreground);
+      "
+    >
+      A visualization isn't a shortcut around thinking. Ideally, it gives you something to think with. Once you can see what's happening, you can start asking better questions, connecting ideas, and understanding the mathematics or science underneath it.
+    </p>
+
+  </div>
+
+
+  <!-- Bottom CTA -->
+  <div
+    class="panel card"
+    style="
+      margin-top:56px;
+      padding:48px 32px;
+      text-align:center;
+    "
+  >
+
+    <h2
+      style="
+        font-size:clamp(24px,3vw,32px);
+        font-weight:600;
+      "
+    >
+      Have a concept you want to see?
+    </h2>
+
+    <p
+      style="
+        margin-top:10px;
+        max-width:600px;
+        margin-left:auto;
+        margin-right:auto;
+      "
+    >
+      Give QuantaCanvas a question and see what an interactive explanation can look like.
+    </p>
+
+    <a
+      class="btn"
+      style="margin-top:24px;"
+      href="tool.html"
+    >
+      Try QuantaCanvas
+    </a>
+
+  </div>
+
+</main>
+
+
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p>
+      QuantaCanvas — visualize the concepts that text can't explain.
+    </p>
+
+    <div class="footer-links">
+      <a href="about.html">About</a>
+      <a href="examples.html">Examples</a>
+      <a href="tool.html">Tool</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+
+</body>
+</html>

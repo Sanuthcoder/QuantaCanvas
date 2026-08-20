@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Differentiation from First Principles</title>
+  
+  <!-- GSAP for animations -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+
+  <!-- JSXGraph for interactive geometry and functions -->
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/jsxgraph@1.8.0/distrib/jsxgraph.css" />
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/jsxgraph@1.8.0/distrib/jsxgraphcore.js"></script>
+
+  <!-- KaTeX for math rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    /* Catppuccin Mocha Palette Variables */
+    :root {
+      --bg: #1e1e2e;
+      --panel: #313244;
+      --text: #cdd6f4;
+      --muted: #6c7086;
+      --grid: #45475a;
+      --axis: #bac2de;
+      --accent1: #89b4fa; /* Blue */
+      --accent2: #f5c2e7; /* Pink */
+      --accent3: #a6e3a1; /* Green */
+      --hover: #f9e2af;   /* Yellow */
+      
+      --visual-w: 55%;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Header styling */
+    header {
+      flex: 0 0 auto;
+      background-color: var(--panel);
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid var(--grid);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent1);
+    }
+
+    .keyboard-hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      background: var(--bg);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid var(--grid);
+    }
+
+    /* Main visual stage */
+    #stage {
+      flex: 1 1 0;
+      min-height: 0;
+      min-width: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .step-container {
+      position: absolute;
+      inset: 0;
+      display: none;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .step-container.active {
+      display: grid;
+    }
+
+    /* Split layout */
+    .split-layout {
+      grid-template-columns: var(--visual-w, 55%) 6px minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .visual-pane {
+      position: relative;
+      height: 100%;
+      width: 100%;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background-color: var(--bg);
+    }
+
+    .visual-host {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Resizable Divider */
+    .divider {
+      grid-column: 2;
+      height: 100%;
+      cursor: col-resize;
+      background-color: var(--grid);
+      position: relative;
+      transition: background-color 0.2s;
+      z-index: 5;
+    }
+
+    .divider:hover, .divider.dragging {
+      background-color: var(--hover);
+    }
+
+    .divider::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 30px;
+      background-color: var(--axis);
+    }
+
+    /* Equation / Lesson Pane */
+    .info-pane {
+      grid-column: 3;
+      height: 100%;
+      width: 100%;
+      min-width: 0;
+      min-height: 0;
+      overflow-y: auto;
+      background-color: var(--panel);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-left: 1px solid var(--grid);
+    }
+
+    .info-content {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-height: 0;
+    }
+
+    .info-pane h2 {
+      font-size: 1.4rem;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .info-text {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--text);
+    }
+
+    .info-text em {
+      color: var(--accent2);
+      font-style: normal;
+      font-weight: 600;
+    }
+
+    /* Math layout */
+    .eq-panel-wrapper {
+      flex: 1 1 0;
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 1rem;
+      border: 1px solid var(--grid);
+      position: relative;
+    }
+
+    .eq-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0.5rem 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent1) transparent;
+      text-align: center;
+    }
+
+    .eq-state {
+      display: inline-block;
+      white-space: nowrap;
+      min-width: max-content;
+      font-size: clamp(1rem, 1.8vw, 1.6rem);
+      transition: opacity 0.3s;
+    }
+
+    /* Inline controls inside equation panel */
+    .eq-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--grid);
+    }
+
+    .eq-btn {
+      background: var(--panel);
+      border: 1px solid var(--grid);
+      color: var(--text);
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+
+    .eq-btn:hover:not(:disabled) {
+      border-color: var(--accent1);
+      color: var(--accent1);
+    }
+
+    .eq-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .eq-progress {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* Footer Navigation */
+    footer {
+      flex: 0 0 auto;
+      background-color: var(--panel);
+      border-top: 1px solid var(--grid);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .nav-btn {
+      background: var(--bg);
+      border: 1px solid var(--grid);
+      color: var(--text);
+      padding: 0.5rem 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      border-color: var(--accent1);
+      color: var(--accent1);
+      background: var(--panel);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .step-dots {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--grid);
+      transition: all 0.3s;
+    }
+
+    .dot.active {
+      background-color: var(--accent1);
+      transform: scale(1.2);
+    }
+
+    /* Interactive overlay guides */
+    .interactive-guide {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(30, 30, 46, 0.85);
+      border: 1px solid var(--grid);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      color: var(--text);
+      pointer-events: none;
+      z-index: 4;
+      backdrop-filter: blur(4px);
+    }
+
+    /* Highlight classes for KaTeX output */
+    .katex .cancel-term {
+      color: var(--accent2) !important;
+      text-decoration: line-through;
+    }
+    .katex .new-term {
+      color: var(--hover) !important;
+    }
+    .katex .final-term {
+      color: var(--accent3) !important;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    <header>
+      <h1>Differentiation from First Principles</h1>
+      <div class="keyboard-hint">Use Keyboard: ← / → for math | Shift + ← / → for steps</div>
+    </header>
+
+    <main id="stage">
+      
+      <!-- STEP 1: The Secant Line -->
+      <div class="step-container split-layout" id="step0">
+        <div class="visual-pane">
+          <div class="interactive-guide">Drag point $Q$ along the curve to change interval width $h$</div>
+          <div id="board0" class="visual-host"></div>
+        </div>
+        <div class="divider" role="separator"></div>
+        <div class="info-pane">
+          <div class="info-content">
+            <h2>1. Average Rate of Change</h2>
+            <p class="info-text">
+              To find the instantaneous rate of change at a point $P$, we start by looking at an average rate of change over an interval. 
+              By picking a nearby point $Q$ at a distance $h$ away, we can draw a <em>secant line</em> through both points.
+            </p>
+            <div class="eq-panel-wrapper">
+              <div class="eq-wrap">
+                <div class="eq-state" id="eq-state-s0"></div>
+              </div>
+              <div class="eq-controls">
+                <button class="eq-btn" id="eq-prev-s0">◀ Back</button>
+                <div class="eq-progress" id="eq-progress-s0">1 / 2</div>
+                <button class="eq-btn" id="eq-next-s0">Next Step ▶</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Shrinking the Interval -->
+      <div class="step-container split-layout" id="step1">
+        <div class="visual-pane">
+          <div class="interactive-guide">Drag the $h$ slider to see the secant line morph into the tangent line</div>
+          <div id="board1" class="visual-host"></div>
+        </div>
+        <div class="divider" role="separator"></div>
+        <div class="info-pane">
+          <div class="info-content">
+            <h2>2. Shrinking the Interval ($h \to 0$)</h2>
+            <p class="info-text">
+              Now let's apply this to a concrete function: $f(x) = x^2$. We want to find the exact slope at any point $x$. 
+              Let's set up the algebra and observe what happens as we make the interval size $h$ approach $0$.
+            </p>
+            <div class="eq-panel-wrapper">
+              <div class="eq-wrap">
+                <div class="eq-state" id="eq-state-s1"></div>
+              </div>
+              <div class="eq-controls">
+                <button class="eq-btn" id="eq-prev-s1">◀ Back</button>
+                <div class="eq-progress" id="eq-progress-s1">1 / 5</div>
+                <button class="eq-btn" id="eq-next-s1">Next Step ▶</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: The Tangent & Derivative -->
+      <div class="step-container split-layout" id="step2">
+        <div class="visual-pane">
+          <div class="interactive-guide">Drag point $x$ to see the tangent slope match the derivative function $f'(x) = 2x$</div>
+          <div id="board2" class="visual-host"></div>
+        </div>
+        <div class="divider" role="separator"></div>
+        <div class="info-pane">
+          <div class="info-content">
+            <h2>3. The Formal Limit</h2>
+            <p class="info-text">
+              By taking the limit as $h$ goes to $0$, we eliminate the interval entirely. The secant slope becomes the <em>tangent slope</em>, giving us the instantaneous rate of change: the derivative.
+            </p>
+            <div class="eq-panel-wrapper">
+              <div class="eq-wrap">
+                <div class="eq-state" id="eq-state-s2"></div>
+              </div>
+              <div class="eq-controls">
+                <button class="eq-btn" id="eq-prev-s2">◀ Back</button>
+                <div class="eq-progress" id="eq-progress-s2">1 / 3</div>
+                <button class="eq-btn" id="eq-next-s2">Next Step ▶</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <footer>
+      <button class="nav-btn" id="prev-step-btn">◀ Previous Part</button>
+      <div class="step-dots">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      <button class="nav-btn" id="next-step-btn">Next Part ▶</button>
+    </footer>
+  </div>
+
+  <script>
+    // Universal Catppuccin Theme Palette
+    const THEME = {
+      bg: '#1e1e2e',
+      panel: '#313244',
+      text: '#cdd6f4',
+      muted: '#6c7086',
+      grid: '#45475a',
+      axis: '#bac2de',
+      accent1: '#89b4fa', // Blue
+      accent2: '#f5c2e7', // Pink
+      accent3: '#a6e3a1', // Green
+      hover: '#f9e2af'    // Yellow
+    };
+
+    // Math/Equation Rendering safe helpers
+    function safeRenderKatex(formula, element) {
+      const cleaned = formula
+        .replace(/^\s*\$\$?|\$\$?\s*$/g, '')
+        .replace(/^\s*\\[\(\[]|\\[\)\]]\s*$/g, '')
+        .trim();
+      const checkExist = setInterval(() => {
+        if (typeof window.katex !== 'undefined') {
+          clearInterval(checkExist);
+          try {
+            window.katex.render(cleaned, element, { throwOnError: false, displayMode: true });
+          } catch (err) { console.error(err); }
+        }
+      }, 30);
+    }
+
+    function safeAutoRender(rootElement) {
+      const tryRender = setInterval(() => {
+        if (typeof window.renderMathInElement !== 'undefined') {
+          clearInterval(tryRender);
+          window.renderMathInElement(rootElement, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$',  right: '$',  display: false},
+              {left: '\\(', right: '\\)', display: false},
+              {left: '\\[', right: '\\]', display: true}
+            ],
+            throwOnError: false,
+            ignoredTags: ['script','noscript','style','textarea','pre','code','option']
+          });
+        }
+      }, 30);
+    }
+
+    // Step state tracking
+    let currentStep = 0;
+    const totalSteps = 3;
+    const stepStates = [
+      { currentEq: 0, totalEq: 2 },
+      { currentEq: 0, totalEq: 5 },
+      { currentEq: 0, totalEq: 3 }
+    ];
+
+    // Equations per step
+    const stepEquations = [
+      // Step 1
+      [
+        "\\text{Slope of Secant } m = \\frac{\\text{Rise}}{\\text{Run}} = \\frac{f(x+h) - f(x)}{h}",
+        "\\text{Slope } m = \\frac{\\textcolor{#f5c2e7}{f(x+h)} - \\textcolor{#89b4fa}{f(x)}}{\\textcolor{#f9e2af}{h}}"
+      ],
+      // Step 2
+      [
+        "\\text{Difference Quotient: } \\frac{f(x+h) - f(x)}{h}",
+        "\\text{Substitute } f(x) = x^2: \\quad \\frac{\\textcolor{#f5c2e7}{(x+h)^2} - \\textcolor{#89b4fa}{x^2}}{h}",
+        "\\text{Expand Numerator: } \\frac{\\textcolor{#f5c2e7}{x^2 + 2xh + h^2} - \\textcolor{#89b4fa}{x^2}}{h}",
+        "\\text{Simplify (Cancel } x^2\\text{): } \\frac{2xh + h^2}{h}",
+        "\\text{Divide by } h: \\quad \\textcolor{#a6e3a1}{2x + h} \\quad (h \\neq 0)"
+      ],
+      // Step 3
+      [
+        "f'(x) = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}",
+        "f'(x) = \\lim_{h \\to 0} (2x + \\textcolor{#f5c2e7}{h})",
+        "\\textcolor{#a6e3a1}{f'(x) = 2x}"
+      ]
+    ];
+
+    // Active boards references
+    let boards = [null, null, null];
+    let stepVisuals = [null, null, null];
+
+    // Main App Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      setupSplitDivider();
+      activateStep(0);
+      setupGlobalNav();
+    });
+
+    // Handle Split Pane Resizing
+    function setupSplitDivider() {
+      const stage = document.getElementById('stage');
+      
+      document.querySelectorAll('.step-container').forEach(step => {
+        const divider = step.querySelector('.divider');
+        if (!divider) return;
+
+        const onPointerDown = (e) => {
+          divider.setPointerCapture(e.pointerId);
+          divider.classList.add('dragging');
+          document.body.style.userSelect = 'none';
+          document.body.style.cursor = 'col-resize';
+          
+          const onPointerMove = (moveEvent) => {
+            const rect = stage.getBoundingClientRect();
+            let pct = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+            pct = Math.max(30, Math.min(80, pct));
+            step.style.setProperty('--visual-w', `${pct}%`);
+            
+            // Instantly notify visualization resize
+            triggerActiveResize();
+          };
+          
+          const onPointerUp = () => {
+            divider.releasePointerCapture(e.pointerId);
+            divider.classList.remove('dragging');
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+            divider.removeEventListener('pointermove', onPointerMove);
+            divider.removeEventListener('pointerup', onPointerUp);
+            triggerActiveResize();
+          };
+          
+          divider.addEventListener('pointermove', onPointerMove);
+          divider.addEventListener('pointerup', onPointerUp);
+        };
+        
+        divider.addEventListener('pointerdown', onPointerDown);
+      });
+
+      window.addEventListener('resize', () => {
+        triggerActiveResize();
+      });
+    }
+
+    function triggerActiveResize() {
+      if (typeof stepVisuals[currentStep]?.resize === 'function') {
+        stepVisuals[currentStep].resize();
+      }
+    }
+
+    // Step Activation Manager
+    function activateStep(index) {
+      // Deactivate current
+      document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.dot').forEach((dot, idx) => {
+        dot.classList.toggle('active', idx === index);
+      });
+
+      // Cleanup current visual
+      if (stepVisuals[currentStep]) {
+        stepVisuals[currentStep].destroy();
+        stepVisuals[currentStep] = null;
+      }
+
+      currentStep = index;
+      const stepEl = document.getElementById(`step${index}`);
+      stepEl.classList.add('active');
+
+      // Initialize Step specific visual
+      setTimeout(() => {
+        if (index === 0) stepVisuals[0] = initStep0Visual();
+        if (index === 1) stepVisuals[1] = initStep1Visual();
+        if (index === 2) stepVisuals[2] = initStep2Visual();
+        triggerActiveResize();
+      }, 50);
+
+      // Equations state render
+      updateEquationState(index);
+
+      // Disable/Enable main nav buttons
+      document.getElementById('prev-step-btn').disabled = (index === 0);
+      document.getElementById('next-step-btn').disabled = (index === totalSteps - 1);
+
+      // Local Step Equation controls setup
+      setupLocalEquationControls(index);
+
+      // Render math inline
+      safeAutoRender(stepEl);
+    }
+
+    function setupGlobalNav() {
+      document.getElementById('prev-step-btn').addEventListener('click', () => {
+        if (currentStep > 0) activateStep(currentStep - 1);
+      });
+      document.getElementById('next-step-btn').addEventListener('click', () => {
+        if (currentStep < totalSteps - 1) activateStep(currentStep + 1);
+      });
+
+      // Keyboard navigation
+      window.addEventListener('keydown', (e) => {
+        if (e.shiftKey) {
+          if (e.key === 'ArrowRight' && currentStep < totalSteps - 1) {
+            activateStep(currentStep + 1);
+          } else if (e.key === 'ArrowLeft' && currentStep > 0) {
+            activateStep(currentStep - 1);
+          }
+        } else {
+          const activeState = stepStates[currentStep];
+          if (e.key === 'ArrowRight' && activeState.currentEq < activeState.totalEq - 1) {
+            activeState.currentEq++;
+            updateEquationState(currentStep);
+          } else if (e.key === 'ArrowLeft' && activeState.currentEq > 0) {
+            activeState.currentEq--;
+            updateEquationState(currentStep);
+          }
+        }
+      });
+    }
+
+    function setupLocalEquationControls(stepIdx) {
+      const prevBtn = document.getElementById(`eq-prev-s${stepIdx}`);
+      const nextBtn = document.getElementById(`eq-next-s${stepIdx}`);
+      
+      prevBtn.onclick = () => {
+        if (stepStates[stepIdx].currentEq > 0) {
+          stepStates[stepIdx].currentEq--;
+          updateEquationState(stepIdx);
+        }
+      };
+
+      nextBtn.onclick = () => {
+        if (stepStates[stepIdx].currentEq < stepStates[stepIdx].totalEq - 1) {
+          stepStates[stepIdx].currentEq++;
+          updateEquationState(stepIdx);
+        }
+      };
+    }
+
+    function updateEquationState(stepIdx) {
+      const state = stepStates[stepIdx];
+      const textElement = document.getElementById(`eq-state-s${stepIdx}`);
+      const progressElement = document.getElementById(`eq-progress-s${stepIdx}`);
+      
+      // Update buttons
+      document.getElementById(`eq-prev-s${stepIdx}`).disabled = (state.currentEq === 0);
+      document.getElementById(`eq-next-s${stepIdx}`).disabled = (state.currentEq === state.totalEq - 1);
+      
+      progressElement.innerText = `${state.currentEq + 1} / ${state.totalEq}`;
+
+      // GSAP cross-fade transition
+      gsap.to(textElement, {
+        opacity: 0,
+        duration: 0.15,
+        onComplete: () => {
+          safeRenderKatex(stepEquations[stepIdx][state.currentEq], textElement);
+          gsap.to(textElement, { opacity: 1, duration: 0.25 });
+        }
+      });
+
+      // Synchronize visualization values if needed
+      if (stepIdx === 1 && stepVisuals[1]) {
+        // Tie equation steps to slider h visual representation in step 2
+        let targetH = 3.0;
+        if (state.currentEq === 1) targetH = 2.0;
+        if (state.currentEq === 2) targetH = 1.0;
+        if (state.currentEq === 3) targetH = 0.4;
+        if (state.currentEq === 4) targetH = 0.05;
+        stepVisuals[1].setH(targetH);
+      }
+    }
+
+
+    /* =========================================================================
+       VISUALIZATION 1: Secant Line with Draggable Q
+       ========================================================================= */
+    function initStep0Visual() {
+      const containerId = 'board0';
+      const el = document.getElementById(containerId);
+      
+      // Calculate dynamic aspect bounding box
+      const getBoundingBox = () => {
+        const ar = el.clientWidth / el.clientHeight;
+        const yRange = 6;
+        const xRange = yRange * ar;
+        // Center the x range around x = 2
+        return [-xRange/2 + 2, yRange, xRange/2 + 2, -1.5];
+      };
+
+      const board = JXG.JSXGraph.initBoard(containerId, {
+        boundingbox: getBoundingBox(),
+        keepaspectratio: true,
+        axis: true,
+        showNavigation: false,
+        showCopyright: false,
+        defaultAxes: {
+          x: { strokeColor: THEME.axis, ticks: { strokeColor: THEME.grid, label: { color: THEME.text } } },
+          y: { strokeColor: THEME.axis, ticks: { strokeColor: THEME.grid, label: { color: THEME.text } } }
+        },
+        grid: { strokeColor: THEME.grid, strokeWidth: 0.5 },
+        background: { fillColor: THEME.bg }
+      });
+
+      // Force style background
+      const svg = el.querySelector('svg');
+      if (svg) svg.style.background = THEME.bg;
+
+      // Function f(x) = 0.25 * x^2
+      const f = x => 0.25 * x * x;
+      const graph = board.create('functiongraph', [f], { strokeColor: THEME.accent1, strokeWidth: 4 });
+
+      // Point P (Fixed at x=1)
+      const px = 1;
+      const py = f(px);
+      const P = board.create('point', [px, py], {
+        name: 'P (x, f(x))',
+        fixed: true,
+        color: THEME.accent1,
+        label: { color: THEME.accent1, offset: [-30, -15] }
+      });
+
+      // Point Q (Glider on function)
+      const Q = board.create('glider', [3, f(3), graph], {
+        name: 'Q (x+h, f(x+h))',
+        color: THEME.accent2,
+        label: { color: THEME.accent2, offset: [15, 15] }
+      });
+
+      // Line PQ (Secant line)
+      const secant = board.create('line', [P, Q], {
+        strokeColor: THEME.hover,
+        strokeWidth: 2,
+        dash: 2
+      });
+
+      // Visual components representing h, f(x), f(x+h)
+      const xLineP = board.create('segment', [[() => P.X(), 0], P], { strokeColor: THEME.muted, strokeWidth: 1, dash: 1 });
+      const xLineQ = board.create('segment', [[() => Q.X(), 0], Q], { strokeColor: THEME.muted, strokeWidth: 1, dash: 1 });
+      
+      const hBrace = board.create('segment', [[() => P.X(), -0.5], [() => Q.X(), -0.5]], {
+        strokeColor: THEME.accent3,
+        strokeWidth: 2
+      });
+      const hText = board.create('text', [
+        () => (P.X() + Q.X()) / 2, -0.8,
+        () => 'h = ' + (Q.X() - P.X()).toFixed(2)
+      ], { color: THEME.accent3, anchorX: 'middle' });
+
+      // Slope value box
+      const slopeText = board.create('text', [0.5, 4.5, () => {
+        const h = Q.X() - P.X();
+        if (Math.abs(h) < 0.001) return 'Secant Slope m: Undefined';
+        const slope = (f(Q.X()) - f(P.X())) / h;
+        return 'Secant Slope (m) = ' + slope.toFixed(3);
+      }], { color: THEME.hover, fontSize: 14, box: { padding: 4, fillOpacity: 0.1, strokeColor: THEME.hover } });
+
+      return {
+        resize: () => {
+          board.resizeContainer(el.clientWidth, el.clientHeight, true, true);
+          board.setBoundingBox(getBoundingBox(), true);
+        },
+        destroy: () => {
+          JXG.JSXGraph.freeBoard(board);
+        }
+      };
+    }
+
+
+    /* =========================================================================
+       VISUALIZATION 2: Secant Limit with Step Control Slider
+       ========================================================================= */
+    function initStep1Visual() {
+      const containerId = 'board1';
+      const el = document.getElementById(containerId);
+
+      const getBoundingBox = () => {
+        const ar = el.clientWidth / el.clientHeight;
+        const yRange = 6;
+        const xRange = yRange * ar;
+        return [-xRange/2 + 2, yRange, xRange/2 + 2, -1.5];
+      };
+
+      const board = JXG.JSXGraph.initBoard(containerId, {
+        boundingbox: getBoundingBox(),
+        keepaspectratio: true,
+        axis: true,
+        showNavigation: false,
+        showCopyright: false,
+        defaultAxes: {
+          x: { strokeColor: THEME.axis, ticks: { strokeColor: THEME.grid, label: { color: THEME.text } } },
+          y: { strokeColor: THEME.axis, ticks: { strokeColor: THEME.grid, label: { color: THEME.text } } }
+        },
+        grid: { strokeColor: THEME.grid, strokeWidth: 0.5 },
+        background: { fillColor: THEME.bg }
+      });
+
+      const svg = el.querySelector('svg');
+      if (svg) svg.style.background = THEME.bg;
+
+      const f = x => 0.25 * x * x;
+      const graph = board.create('functiongraph', [f], { strokeColor: THEME.accent1, strokeWidth: 4 });
+
+      // H Slider for step controls
+      const hSlider = board.create('slider', [[0.5, -0.8], [3.5, -0.8], [0.01, 3.0, 3.0]], {
+        name: 'h',
+        strokeColor: THEME.accent3,
+        fillColor: THEME.accent3,
+        label: { color: THEME.accent3 }
+      });
+
+      // Fixed base point P at x = 1.5
+      const px = 1.5;
+      const py = f(px);
+      const P = board.create('point', [px, py], {
+        name: 'P',
+        fixed: true,
+        color: THEME.accent1,
+        label: { color: THEME.accent1, offset: [-15, -15] }
+      });
+
+      // Dependent Point Q
+      const Q = board.create('point', [
+        () => px + hSlider.Value(),
+        () => f(px + hSlider.Value())
+      ], {
+        name: 'Q',
+        color: THEME.accent2,
+        label: { color: THEME.accent2, offset: [10, 15] }
+      });
+
+      // Secant Line
+      const secant = board.create('line', [P, Q], {
+        strokeColor: THEME.hover,
+        strokeWidth: 2
+      });
+
+      // Reference true tangent line (dotted)
+      const tangent = board.create('tangent', [P], {
+        strokeColor: THEME.accent3,
+        strokeWidth: 2,
+        dash: 3
+      });
+
+      // Indicators
+      const dxLine = board.create('segment', [[() => P.X(), () => P.Y()], [() => Q.X(), () => P.Y()]], { strokeColor: THEME.accent3, strokeWidth: 1.5, dash: 2 });
+      const dyLine = board.create('segment', [[() => Q.X(), () => P.Y()], [() => Q.X(), () => Q.Y()]], { strokeColor: THEME.accent2, strokeWidth: 1.5, dash: 2 });
+
+      return {
+        setH: (val) => {
+          hSlider.setValue(val);
+          board.update();
+        },
+        resize: () => {
+          board.resizeContainer(el.clientWidth, el.clientHeight, true, true);
+          board.setBoundingBox(getBoundingBox(), true);
+        },
+        destroy: () => {
+          JXG.JSXGraph.freeBoard(board);
+        }
+      };
+    }
+
+
+    /* =========================================================================
+       VISUALIZATION 3: Graph of Derivative (f(x) and f'(x) comparison)
+       ========================================================================= */
+    function initStep2Visual() {
+      const containerId = 'board2';
+      const el = document.getElementById(containerId);
+
+      const getBoundingBox = () => {
+        const ar = el.clientWidth / el.clientHeight;
+        const yRange = 6;
+        const xRange = yRange * ar;
+        return [-xRange/2 + 1.5, yRange, xRange/2 + 1.5, -1.5];
+      };
+
+      const board = JXG.JSXGraph.initBoard(containerId, {
+        boundingbox: getBoundingBox(),
+        keepaspectratio: true,
+        axis: true,
+        showNavigation: false,
+        showCopyright: false,
+        defaultAxes: {
+          x: { strokeColor: THEME.axis, ticks: { strokeColor: THEME.grid, label: { color: THEME.text } } },
+          y: { strokeColor: THEME.axis, ticks: { strokeColor: THEME.grid, label: { color: THEME.text } } }
+        },
+        grid: { strokeColor: THEME.grid, strokeWidth: 0.5 },
+        background: { fillColor: THEME.bg }
+      });
+
+      const svg = el.querySelector('svg');
+      if (svg) svg.style.background = THEME.bg;
+
+      // Function f(x) = 0.5 * x^2 (adapted scale to look great in bounds)
+      const f = x => 0.25 * x * x;
+      // Derivative f'(x) = 0.5 * x
+      const df = x => 0.5 * x;
+
+      const fGraph = board.create('functiongraph', [f], { strokeColor: THEME.accent1, strokeWidth: 3 });
+      const dfGraph = board.create('functiongraph', [df], { strokeColor: THEME.accent3, strokeWidth: 3, dash: 2 });
+
+      // Glider point tracking x coordinate
+      const pGlider = board.create('glider', [2, f(2), fGraph], {
+        name: 'x',
+        color: THEME.accent1,
+        label: { color: THEME.accent1, offset: [-10, 15] }
+      });
+
+      // Tangent line on f(x)
+      const tangent = board.create('tangent', [pGlider], {
+        strokeColor: THEME.hover,
+        strokeWidth: 2
+      });
+
+      // Point tracking on the derivative function dfGraph
+      const dfPoint = board.create('point', [
+        () => pGlider.X(),
+        () => df(pGlider.X())
+      ], {
+        name: "Slope point",
+        color: THEME.accent3,
+        label: { color: THEME.accent3, offset: [15, -10] }
+      });
+
+      // Visual projection lines linking the derivative point and original point
+      const connectionLine = board.create('segment', [pGlider, dfPoint], {
+        strokeColor: THEME.muted,
+        strokeWidth: 1,
+        dash: 1
+      });
+
+      // Dynamic display legends
+      const legend = board.create('text', [-1.5, 5, () => {
+        const xVal = pGlider.X().toFixed(2);
+        const yVal = f(pGlider.X()).toFixed(2);
+        const slopeVal = df(pGlider.X()).toFixed(2);
+        return `At x = ${xVal}:<br>Function Value y = ${yVal}<br>Tangent Slope m = ${slopeVal}`;
+      }], { color: THEME.text, fontSize: 13, box: { padding: 5, fillOpacity: 0.1, strokeColor: THEME.grid } });
+
+      return {
+        resize: () => {
+          board.resizeContainer(el.clientWidth, el.clientHeight, true, true);
+          board.setBoundingBox(getBoundingBox(), true);
+        },
+        destroy: () => {
+          JXG.JSXGraph.freeBoard(board);
+        }
+      };
+    }
+  </script>
+</body>
+</html>

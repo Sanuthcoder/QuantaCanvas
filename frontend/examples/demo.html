@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Maclaurin Series Approximation</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/jsxgraph@1.8.0/distrib/jsxgraph.css" />
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/jsxgraph@1.8.0/distrib/jsxgraphcore.js"></script>
+    <style>
+        :root {
+            --bg: #1e1e2e;
+            --panel: #313244;
+            --text: #cdd6f4;
+            --muted: #6c7086;
+            --grid: #45475a;
+            --axis: #bac2de;
+            --accent1: #89b4fa;
+            --accent2: #f5c2e7;
+            --accent3: #a6e3a1;
+            --hover: #f9e2af;
+            --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        body, html {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-family);
+        }
+        #app {
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        header {
+            flex: 0 0 auto;
+            background-color: var(--panel);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--grid);
+            z-index: 10;
+        }
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent1);
+        }
+        .global-progress {
+            font-size: 0.9rem;
+            color: var(--muted);
+            background: var(--bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        #stage {
+            flex: 1 1 0;
+            min-height: 0;
+            min-width: 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .step-container {
+            position: absolute;
+            inset: 0;
+            display: none;
+            grid-template-rows: minmax(0, 1fr);
+            height: 100%;
+            min-height: 0;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .step-container.active {
+            display: grid;
+        }
+        .step-container[data-layout="split"] {
+            grid-template-columns: var(--visual-w, 60%) 6px minmax(0, 1fr);
+        }
+        .visual-pane {
+            position: relative;
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+            background-color: var(--bg);
+        }
+        .visual-host {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .divider {
+            grid-column: 2;
+            height: 100%;
+            cursor: col-resize;
+            background-color: var(--grid);
+            position: relative;
+            transition: background-color 0.2s;
+            z-index: 5;
+        }
+        .divider:hover, .step-container.dragging .divider {
+            background-color: var(--hover);
+        }
+        .divider::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 30px;
+            background-color: var(--bg);
+            border-radius: 1px;
+        }
+        .content-pane {
+            grid-column: 3;
+            min-width: 0;
+            min-height: 0;
+            overflow-y: auto;
+            background-color: var(--panel);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-left: 1px solid var(--grid);
+        }
+        .text-section {
+            flex: 0 0 auto;
+            margin-bottom: 1.5rem;
+        }
+        .text-section h2 {
+            font-size: 1.8rem;
+            color: var(--accent1);
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+        }
+        .text-section p {
+            font-size: 1.05rem;
+            line-height: 1.6;
+            color: var(--text);
+        }
+        .equation-section {
+            flex: 1 1 0;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid var(--grid);
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+        .eq-wrap {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 0.5rem 0;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent1) transparent;
+            text-align: center;
+        }
+        .eq-state {
+            display: inline-block;
+            white-space: nowrap;
+            min-width: max-content;
+            font-size: clamp(1.2rem, 2vw, 1.8rem);
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        .eq-state.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .local-controls {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--panel);
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--grid);
+        }
+        .local-btn-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn {
+            background-color: var(--grid);
+            color: var(--text);
+            border: none;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn:hover:not(:disabled) {
+            background-color: var(--accent1);
+            color: var(--bg);
+        }
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .btn-primary {
+            background-color: var(--accent1);
+            color: var(--bg);
+        }
+        .btn-primary:hover {
+            background-color: var(--hover);
+        }
+        .eq-progress {
+            font-size: 0.85rem;
+            color: var(--muted);
+            font-weight: 600;
+        }
+        footer {
+            flex: 0 0 auto;
+            background-color: var(--panel);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--grid);
+            z-index: 10;
+        }
+        .global-btn-group {
+            display: flex;
+            gap: 1rem;
+        }
+        .sandbox-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            background: var(--bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--grid);
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .control-group label {
+            font-size: 0.9rem;
+            color: var(--accent2);
+            font-weight: 600;
+        }
+        .custom-select {
+            background: var(--panel);
+            color: var(--text);
+            border: 1px solid var(--grid);
+            padding: 0.6rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            outline: none;
+            cursor: pointer;
+        }
+        .custom-select:focus {
+            border-color: var(--accent1);
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .custom-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--grid);
+            outline: none;
+        }
+        .custom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent1);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .custom-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: var(--hover);
+        }
+        .slider-val {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent1);
+            min-width: 2rem;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>Maclaurin Series</h1>
+            <div class="global-progress" id="globalProgress">Step 1 of 4</div>
+        </header>
+
+        <div id="stage">
+            <div class="step-container" id="step0" data-layout="split">
+                <div class="visual-pane">
+                    <div id="board0" class="visual-host"></div>
+                </div>
+                <div class="divider" role="separator" aria-orientation="vertical"></div>
+                <div class="content-pane">
+                    <div class="text-section">
+                        <h2>The Linear Tangent</h2>
+                        <p>A Maclaurin series approximates a function $f(x)$ centered at $x=0$. The simplest approximation is a straight line matching the value and slope of the function at that center point.</p>
+                    </div>
+                    <div class="equation-section">
+                        <div class="eq-wrap">
+                            <div class="eq-state" id="eq0"></div>
+                        </div>
+                    </div>
+                    <div class="local-controls">
+                        <button class="btn" id="replay0">Reset</button>
+                        <span class="eq-progress" id="progress0">1 / 5</span>
+                        <div class="local-btn-group">
+                            <button class="btn" id="prev0">◀ Prev</button>
+                            <button class="btn btn-primary" id="next0">Next ▶</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-container" id="step1" data-layout="split">
+                <div class="visual-pane">
+                    <div id="board1" class="visual-host"></div>
+                </div>
+                <div class="divider" role="separator" aria-orientation="vertical"></div>
+                <div class="content-pane">
+                    <div class="text-section">
+                        <h2>Adding Curvature</h2>
+                        <p>To follow the function's bend, we introduce higher-order derivatives. A cubic term lets the approximation curve gracefully with $f(x)$ as it departs from the center.</p>
+                    </div>
+                    <div class="equation-section">
+                        <div class="eq-wrap">
+                            <div class="eq-state" id="eq1"></div>
+                        </div>
+                    </div>
+                    <div class="local-controls">
+                        <button class="btn" id="replay1">Reset</button>
+                        <span class="eq-progress" id="progress1">1 / 5</span>
+                        <div class="local-btn-group">
+                            <button class="btn" id="prev1">◀ Prev</button>
+                            <button class="btn btn-primary" id="next1">Next ▶</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-container" id="step2" data-layout="split">
+                <div class="visual-pane">
+                    <div id="board2" class="visual-host"></div>
+                </div>
+                <div class="divider" role="separator" aria-orientation="vertical"></div>
+                <div class="content-pane">
+                    <div class="text-section">
+                        <h2>Expanding the Horizon</h2>
+                        <p>With each added non-zero term, the polynomial gains extra inflection points, enabling it to match the waves of $\sin(x)$ further and further away from zero.</p>
+                    </div>
+                    <div class="equation-section">
+                        <div class="eq-wrap">
+                            <div class="eq-state" id="eq2"></div>
+                        </div>
+                    </div>
+                    <div class="local-controls">
+                        <button class="btn" id="replay2">Reset</button>
+                        <span class="eq-progress" id="progress2">1 / 4</span>
+                        <div class="local-btn-group">
+                            <button class="btn" id="prev2">◀ Prev</button>
+                            <button class="btn btn-primary" id="next2">Next ▶</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-container" id="step3" data-layout="split">
+                <div class="visual-pane">
+                    <div id="board3" class="visual-host"></div>
+                </div>
+                <div class="divider" role="separator" aria-orientation="vertical"></div>
+                <div class="content-pane">
+                    <div class="text-section">
+                        <h2>Infinite Playground</h2>
+                        <p>Explore different classic functions. Increase the number of terms to see how the mathematical series dynamically matches the shape of the true function across the whole coordinate plane.</p>
+                    </div>
+                    <div class="sandbox-controls">
+                        <div class="control-group">
+                            <label for="funcSelect">Select Function</label>
+                            <select id="funcSelect" class="custom-select">
+                                <option value="sin">Sine: f(x) = sin(x)</option>
+                                <option value="cos">Cosine: f(x) = cos(x)</option>
+                                <option value="exp">Exponential: f(x) = e^x</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Terms / Degree</label>
+                            <div class="slider-container">
+                                <input type="range" id="degreeSlider" min="1" max="15" value="3" class="custom-slider">
+                                <span class="slider-val" id="degreeVal">3</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <button class="btn" id="globalPrev">◀ Previous Step</button>
+            <div class="global-btn-group">
+                <button class="btn btn-primary" id="globalNext">Next Step ▶</button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const THEME = {
+            bg: '#1e1e2e',
+            panel: '#313244',
+            text: '#cdd6f4',
+            muted: '#6c7086',
+            grid: '#45475a',
+            axis: '#bac2de',
+            accent1: '#89b4fa',
+            accent2: '#f5c2e7',
+            accent3: '#a6e3a1',
+            hover: '#f9e2af'
+        };
+
+        let currentStep = 0;
+        const totalSteps = 4;
+        let currentStepObj = null;
+
+        function safeRenderKatex(formula, element) {
+            const cleaned = formula
+                .replace(/^\s*\$\$?|\$\$?\s*$/g, '')
+                .replace(/^\s*\\[\(\[]|\\[\)\]]\s*$/g, '')
+                .trim();
+            const checkExist = setInterval(() => {
+                if (typeof window.katex !== 'undefined') {
+                    clearInterval(checkExist);
+                    try {
+                        window.katex.render(cleaned, element, { throwOnError: false, displayMode: true });
+                    } catch (err) { console.error(err); }
+                }
+            }, 50);
+        }
+
+        function safeAutoRender(rootElement) {
+            const tryRender = setInterval(() => {
+                if (typeof window.renderMathInElement !== 'undefined') {
+                    clearInterval(tryRender);
+                    window.renderMathInElement(rootElement, {
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '$',  right: '$',  display: false},
+                            {left: '\\(', right: '\\)', display: false},
+                            {left: '\\[', right: '\\]', display: true}
+                        ],
+                        throwOnError: false,
+                        ignoredTags: ['script','noscript','style','textarea','pre','code','option']
+                    });
+                }
+            }, 50);
+        }
+
+        function initJSXGraph(divId, xRangeVal = 6) {
+            const el = document.getElementById(divId);
+            const ar = el.clientWidth / el.clientHeight;
+            const yRange = 4.5;
+            const xRange = yRange * ar;
+
+            const board = JXG.JSXGraph.initBoard(divId, {
+                boundingbox: [-xRange, yRange, xRange, -yRange],
+                keepaspectratio: true,
+                axis: true,
+                showNavigation: false,
+                showCopyright: false,
+                defaultAxes: {
+                    x: {
+                        strokeColor: THEME.axis,
+                        ticks: {
+                            strokeColor: THEME.grid,
+                            label: {color: THEME.text}
+                        }
+                    },
+                    y: {
+                        strokeColor: THEME.axis,
+                        ticks: {
+                            strokeColor: THEME.grid,
+                            label: {color: THEME.text}
+                        }
+                    }
+                },
+                grid: {
+                    strokeColor: THEME.grid,
+                    strokeWidth: 0.5
+                },
+                background: {
+                    fillColor: THEME.bg
+                }
+            });
+
+            setTimeout(() => {
+                const svg = document.querySelector(`#${divId} svg`);
+                if (svg) {
+                    svg.style.background = THEME.bg;
+                    svg.style.borderRadius = '8px';
+                }
+            }, 30);
+
+            return { board, yRange };
+        }
+
+        function animateCurve(board, graph) {
+            const path = document.getElementById(graph.rendNode.id);
+            if (path) {
+                const len = path.getTotalLength() || 1000;
+                gsap.fromTo(path, 
+                    { strokeDasharray: len, strokeDashoffset: len },
+                    { strokeDashoffset: 0, duration: 1.5, ease: 'power2.out' }
+                );
+            }
+        }
+
+        function factorial(n) {
+            if (n <= 1) return 1;
+            let res = 1;
+            for (let i = 2; i <= n; i++) res *= i;
+            return res;
+        }
+
+        const stepDefinitions = [
+            {
+                board: null,
+                eqIndex: 0,
+                formulas: [
+                    "f(x) = \\sin(x)",
+                    "f(0) = 0, \\quad f'(0) = 1",
+                    "P_1(x) = f(0) + f'(0)x",
+                    "P_1(x) = 0 + \\textcolor{#f9e2af}{1 \\cdot x}",
+                    "P_1(x) = \\textcolor{#a6e3a1}{x}"
+                ],
+                setup() {
+                    const { board, yRange } = initJSXGraph('board0');
+                    this.board = board;
+
+                    board.create('functiongraph', [x => Math.sin(x)], {
+                        strokeColor: THEME.muted,
+                        strokeWidth: 2,
+                        dash: 2
+                    });
+
+                    this.approx = board.create('functiongraph', [x => 0], {
+                        strokeColor: THEME.accent1,
+                        strokeWidth: 4
+                    });
+
+                    board.create('point', [0, 0], {
+                        name: 'Center (0,0)',
+                        size: 4,
+                        color: THEME.accent3,
+                        label: {color: THEME.text, offset: [10, 10]}
+                    });
+
+                    this.updateState();
+                },
+                updateState() {
+                    const eqEl = document.getElementById('eq0');
+                    gsap.to(eqEl, {opacity: 0, y: -10, duration: 0.15, onComplete: () => {
+                        safeRenderKatex(this.formulas[this.eqIndex], eqEl);
+                        document.getElementById('progress0').innerText = `${this.eqIndex + 1} / ${this.formulas.length}`;
+                        
+                        document.getElementById('prev0').disabled = this.eqIndex === 0;
+                        document.getElementById('next0').disabled = this.eqIndex === this.formulas.length - 1;
+
+                        if (this.eqIndex >= 3) {
+                            this.approx.setAttribute({ strokeColor: THEME.accent1 });
+                            this.approx.Y = x => x;
+                        } else {
+                            this.approx.setAttribute({ strokeColor: 'transparent' });
+                        }
+                        this.board.update();
+                        
+                        if (this.eqIndex === 3) {
+                            animateCurve(this.board, this.approx);
+                        }
+
+                        gsap.to(eqEl, {opacity: 1, y: 0, duration: 0.25});
+                    }});
+                },
+                destroy() {
+                    if (this.board) {
+                        JXG.JSXGraph.freeBoard(this.board);
+                        this.board = null;
+                    }
+                },
+                resize() {
+                    if (this.board) {
+                        const el = document.getElementById('board0');
+                        const w = el.clientWidth;
+                        const h = el.clientHeight;
+                        this.board.resizeContainer(w, h, true, true);
+                        const ar = w / h;
+                        const yR = 4.5;
+                        const xR = yR * ar;
+                        this.board.setBoundingBox([-xR, yR, xR, -yR], true);
+                    }
+                }
+            },
+            {
+                board: null,
+                eqIndex: 0,
+                formulas: [
+                    "f''(0) = 0, \\quad f'''(0) = -1",
+                    "P_3(x) = P_1(x) + \\frac{f''(0)}{2!}x^2 + \\frac{f'''(0)}{3!}x^3",
+                    "P_3(x) = x + 0 + \\frac{\\textcolor{#f5c2e7}{-1}}{6}x^3",
+                    "P_3(x) = x \\textcolor{#f9e2af}{- \\frac{x^3}{6}}",
+                    "P_3(x) = \\textcolor{#a6e3a1}{x - \\frac{x^3}{6}}"
+                ],
+                setup() {
+                    const { board } = initJSXGraph('board1');
+                    this.board = board;
+
+                    board.create('functiongraph', [x => Math.sin(x)], {
+                        strokeColor: THEME.muted,
+                        strokeWidth: 2,
+                        dash: 2
+                    });
+
+                    this.p1 = board.create('functiongraph', [x => x], {
+                        strokeColor: THEME.muted,
+                        strokeWidth: 1.5,
+                        dash: 1
+                    });
+
+                    this.approx = board.create('functiongraph', [x => x], {
+                        strokeColor: THEME.accent1,
+                        strokeWidth: 4
+                    });
+
+                    board.create('point', [0, 0], {
+                        name: 'Center',
+                        size: 3,
+                        color: THEME.accent3,
+                        showInfobox: false
+                    });
+
+                    this.updateState();
+                },
+                updateState() {
+                    const eqEl = document.getElementById('eq1');
+                    gsap.to(eqEl, {opacity: 0, y: -10, duration: 0.15, onComplete: () => {
+                        safeRenderKatex(this.formulas[this.eqIndex], eqEl);
+                        document.getElementById('progress1').innerText = `${this.eqIndex + 1} / ${this.formulas.length}`;
+
+                        document.getElementById('prev1').disabled = this.eqIndex === 0;
+                        document.getElementById('next1').disabled = this.eqIndex === this.formulas.length - 1;
+
+                        if (this.eqIndex >= 2) {
+                            this.approx.Y = x => x - Math.pow(x, 3) / 6;
+                            this.approx.setAttribute({ strokeColor: THEME.accent1 });
+                        } else {
+                            this.approx.Y = x => x;
+                        }
+                        this.board.update();
+
+                        if (this.eqIndex === 2) {
+                            animateCurve(this.board, this.approx);
+                        }
+
+                        gsap.to(eqEl, {opacity: 1, y: 0, duration: 0.25});
+                    }});
+                },
+                destroy() {
+                    if (this.board) {
+                        JXG.JSXGraph.freeBoard(this.board);
+                        this.board = null;
+                    }
+                },
+                resize() {
+                    if (this.board) {
+                        const el = document.getElementById('board1');
+                        const w = el.clientWidth;
+                        const h = el.clientHeight;
+                        this.board.resizeContainer(w, h, true, true);
+                        const ar = w / h;
+                        const yR = 4.5;
+                        const xR = yR * ar;
+                        this.board.setBoundingBox([-xR, yR, xR, -yR], true);
+                    }
+                }
+            },
+            {
+                board: null,
+                eqIndex: 0,
+                formulas: [
+                    "P_5(x) = P_3(x) + \\frac{f^{(4)}(0)}{4!}x^4 + \\frac{f^{(5)}(0)}{5!}x^5",
+                    "P_5(x) = x - \\frac{x^3}{6} + 0 + \\textcolor{#f9e2af}{\\frac{1}{120}x^5}",
+                    "P_5(x) = \\textcolor{#a6e3a1}{x - \\frac{x^3}{6} + \\frac{x^5}{120}}"
+                ],
+                setup() {
+                    const { board } = initJSXGraph('board2');
+                    this.board = board;
+
+                    board.create('functiongraph', [x => Math.sin(x)], {
+                        strokeColor: THEME.muted,
+                        strokeWidth: 2,
+                        dash: 2
+                    });
+
+                    board.create('functiongraph', [x => x - Math.pow(x, 3)/6], {
+                        strokeColor: THEME.muted,
+                        strokeWidth: 1.5,
+                        dash: 1
+                    });
+
+                    this.approx = board.create('functiongraph', [x => x - Math.pow(x, 3)/6], {
+                        strokeColor: THEME.accent1,
+                        strokeWidth: 4
+                    });
+
+                    this.updateState();
+                },
+                updateState() {
+                    const eqEl = document.getElementById('eq2');
+                    gsap.to(eqEl, {opacity: 0, y: -10, duration: 0.15, onComplete: () => {
+                        safeRenderKatex(this.formulas[this.eqIndex], eqEl);
+                        document.getElementById('progress2').innerText = `${this.eqIndex + 1} / ${this.formulas.length}`;
+
+                        document.getElementById('prev2').disabled = this.eqIndex === 0;
+                        document.getElementById('next2').disabled = this.eqIndex === this.formulas.length - 1;
+
+                        if (this.eqIndex >= 1) {
+                            this.approx.Y = x => x - Math.pow(x, 3) / 6 + Math.pow(x, 5) / 120;
+                        } else {
+                            this.approx.Y = x => x - Math.pow(x, 3) / 6;
+                        }
+                        this.board.update();
+
+                        if (this.eqIndex === 1) {
+                            animateCurve(this.board, this.approx);
+                        }
+
+                        gsap.to(eqEl, {opacity: 1, y: 0, duration: 0.25});
+                    }});
+                },
+                destroy() {
+                    if (this.board) {
+                        JXG.JSXGraph.freeBoard(this.board);
+                        this.board = null;
+                    }
+                },
+                resize() {
+                    if (this.board) {
+                        const el = document.getElementById('board2');
+                        const w = el.clientWidth;
+                        const h = el.clientHeight;
+                        this.board.resizeContainer(w, h, true, true);
+                        const ar = w / h;
+                        const yR = 4.5;
+                        const xR = yR * ar;
+                        this.board.setBoundingBox([-xR, yR, xR, -yR], true);
+                    }
+                }
+            },
+            {
+                board: null,
+                activeFunc: 'sin',
+                terms: 3,
+                targetGraph: null,
+                approxGraph: null,
+                setup() {
+                    const { board } = initJSXGraph('board3');
+                    this.board = board;
+
+                    this.targetGraph = board.create('functiongraph', [x => this.evalTarget(x)], {
+                        strokeColor: THEME.accent2,
+                        strokeWidth: 2,
+                        dash: 2
+                    });
+
+                    this.approxGraph = board.create('functiongraph', [x => this.evalApprox(x)], {
+                        strokeColor: THEME.accent1,
+                        strokeWidth: 4
+                    });
+
+                    this.updateFormula();
+                    this.setupEvents();
+                },
+                evalTarget(x) {
+                    if (this.activeFunc === 'sin') return Math.sin(x);
+                    if (this.activeFunc === 'cos') return Math.cos(x);
+                    if (this.activeFunc === 'exp') return Math.exp(x);
+                    return 0;
+                },
+                evalApprox(x) {
+                    let sum = 0;
+                    const n = this.terms;
+                    if (this.activeFunc === 'sin') {
+                        for (let i = 0; i < n; i++) {
+                            let power = 2 * i + 1;
+                            let term = Math.pow(x, power) / factorial(power);
+                            sum += (i % 2 === 1) ? -term : term;
+                        }
+                    } else if (this.activeFunc === 'cos') {
+                        for (let i = 0; i < n; i++) {
+                            let power = 2 * i;
+                            let term = Math.pow(x, power) / factorial(power);
+                            sum += (i % 2 === 1) ? -term : term;
+                        }
+                    } else if (this.activeFunc === 'exp') {
+                        for (let i = 0; i < n; i++) {
+                            sum += Math.pow(x, i) / factorial(i);
+                        }
+                    }
+                    return sum;
+                },
+                updateFormula() {
+                    const eqEl = document.getElementById('eq3');
+                    let form = "";
+                    if (this.activeFunc === 'sin') {
+                        form = `\\sin(x) \\approx \\sum_{n=0}^{${this.terms - 1}} \\frac{(-1)^n x^{2n+1}}{(2n+1)!}`;
+                    } else if (this.activeFunc === 'cos') {
+                        form = `\\cos(x) \\approx \\sum_{n=0}^{${this.terms - 1}} \\frac{(-1)^n x^{2n}}{(2n)!}`;
+                    } else if (this.activeFunc === 'exp') {
+                        form = `e^x \\approx \\sum_{n=0}^{${this.terms - 1}} \\frac{x^n}{n!}`;
+                    }
+                    safeRenderKatex(form, eqEl);
+                },
+                setupEvents() {
+                    const funcSelect = document.getElementById('funcSelect');
+                    const slider = document.getElementById('degreeSlider');
+                    const valDisplay = document.getElementById('degreeVal');
+
+                    funcSelect.onchange = (e) => {
+                        this.activeFunc = e.target.value;
+                        this.board.update();
+                        this.updateFormula();
+                    };
+
+                    slider.oninput = (e) => {
+                        this.terms = parseInt(e.target.value);
+                        valDisplay.innerText = this.terms;
+                        this.board.update();
+                        this.updateFormula();
+                    };
+                },
+                destroy() {
+                    if (this.board) {
+                        JXG.JSXGraph.freeBoard(this.board);
+                        this.board = null;
+                    }
+                    document.getElementById('funcSelect').onchange = null;
+                    document.getElementById('degreeSlider').oninput = null;
+                },
+                resize() {
+                    if (this.board) {
+                        const el = document.getElementById('board3');
+                        const w = el.clientWidth;
+                        const h = el.clientHeight;
+                        this.board.resizeContainer(w, h, true, true);
+                        const ar = w / h;
+                        const yR = 4.5;
+                        const xR = yR * ar;
+                        this.board.setBoundingBox([-xR, yR, xR, -yR], true);
+                    }
+                }
+            }
+        ];
+
+        function activateStep(index) {
+            if (currentStepObj) {
+                currentStepObj.destroy();
+            }
+
+            document.querySelectorAll('.step-container').forEach((el, i) => {
+                if (i === index) {
+                    el.classList.add('active');
+                    safeAutoRender(el);
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+
+            currentStep = index;
+            document.getElementById('globalProgress').innerText = `Step ${currentStep + 1} of ${totalSteps}`;
+
+            document.getElementById('globalPrev').disabled = currentStep === 0;
+            if (currentStep === totalSteps - 1) {
+                document.getElementById('globalNext').innerText = "Finish";
+            } else {
+                document.getElementById('globalNext').innerText = "Next Step ▶";
+            }
+
+            currentStepObj = stepDefinitions[currentStep];
+            currentStepObj.setup();
+            
+            setTimeout(() => {
+                currentStepObj.resize();
+            }, 50);
+        }
+
+        // Setup step local navigation bindings
+        for (let i = 0; i < 3; i++) {
+            document.getElementById(`next${i}`).onclick = () => {
+                if (stepDefinitions[i].eqIndex < stepDefinitions[i].formulas.length - 1) {
+                    stepDefinitions[i].eqIndex++;
+                    stepDefinitions[i].updateState();
+                }
+            };
+            document.getElementById(`prev${i}`).onclick = () => {
+                if (stepDefinitions[i].eqIndex > 0) {
+                    stepDefinitions[i].eqIndex--;
+                    stepDefinitions[i].updateState();
+                }
+            };
+            document.getElementById(`replay${i}`).onclick = () => {
+                stepDefinitions[i].eqIndex = 0;
+                stepDefinitions[i].updateState();
+            };
+        }
+
+        document.getElementById('globalPrev').onclick = () => {
+            if (currentStep > 0) {
+                activateStep(currentStep - 1);
+            }
+        };
+
+        document.getElementById('globalNext').onclick = () => {
+            if (currentStep < totalSteps - 1) {
+                activateStep(currentStep + 1);
+            }
+        };
+
+        // Resizable Split Pane Logic
+        const stage = document.getElementById('stage');
+        let isDragging = false;
+        let activeDivider = null;
+        let activeStepEl = null;
+
+        document.addEventListener('pointerdown', e => {
+            if (e.target.classList.contains('divider')) {
+                isDragging = true;
+                activeDivider = e.target;
+                activeStepEl = activeDivider.closest('.step-container');
+                activeStepEl.classList.add('dragging');
+                document.body.style.userSelect = 'none';
+                document.body.style.cursor = 'col-resize';
+                activeDivider.setPointerCapture(e.pointerId);
+            }
+        });
+
+        document.addEventListener('pointermove', e => {
+            if (!isDragging || !activeStepEl) return;
+            const rect = stage.getBoundingClientRect();
+            let pct = ((e.clientX - rect.left) / rect.width) * 100;
+            if (pct < 30) pct = 30;
+            if (pct > 80) pct = 80;
+            activeStepEl.style.setProperty('--visual-w', pct + '%');
+            
+            if (currentStepObj && typeof currentStepObj.resize === 'function') {
+                currentStepObj.resize();
+            }
+        });
+
+        document.addEventListener('pointerup', e => {
+            if (isDragging && activeDivider) {
+                activeDivider.releasePointerCapture(e.pointerId);
+                activeStepEl.classList.remove('dragging');
+                isDragging = false;
+                activeDivider = null;
+                activeStepEl = null;
+                document.body.style.userSelect = '';
+                document.body.style.cursor = '';
+                if (currentStepObj && typeof currentStepObj.resize === 'function') {
+                    currentStepObj.resize();
+                }
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (currentStepObj && typeof currentStepObj.resize === 'function') {
+                currentStepObj.resize();
+            }
+        });
+
+        // Global keyboard shortcut listeners
+        window.addEventListener('keydown', e => {
+            if (e.shiftKey && e.key === 'ArrowRight') {
+                if (currentStep < totalSteps - 1) activateStep(currentStep + 1);
+            } else if (e.shiftKey && e.key === 'ArrowLeft') {
+                if (currentStep > 0) activateStep(currentStep - 1);
+            } else if (e.key === 'ArrowRight') {
+                if (currentStep < 3) {
+                    const step = stepDefinitions[currentStep];
+                    if (step.eqIndex < step.formulas.length - 1) {
+                        step.eqIndex++;
+                        step.updateState();
+                    }
+                }
+            } else if (e.key === 'ArrowLeft') {
+                if (currentStep < 3) {
+                    const step = stepDefinitions[currentStep];
+                    if (step.eqIndex > 0) {
+                        step.eqIndex--;
+                        step.updateState();
+                    }
+                }
+            }
+        });
+
+        // Initialize App
+        activateStep(0);
+    </script>
+</body>
+</html>
