@@ -1546,7 +1546,7 @@ body.tool-page .site-footer {
 .footer-inner {
   max-width: 1160px;
   margin: 0 auto;
-  padding: 25px 24px;
+  padding: 15px 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1809,19 +1809,6 @@ body.tool-page .site-footer {
 
 
 /* Tablets and below: tighter gutters, taller ratio. */
-@media (max-width: 900px) {
-  .vor-page {
-    --vor-chrome: 240px;
-    --vor-gutter: 16px;
-  }
-  .vor-wrap {
-    width: min(100% - var(--vor-gutter) * 2, calc((100dvh - var(--vor-chrome)) * 4 / 3));
-  }
-  .vor-page .viz-box {
-    aspect-ratio: 4 / 3;
-  }
-}
-
 @media (max-width: 600px) and (orientation: portrait) {
   .vor-wrap {
     width: calc(100% - var(--vor-gutter) * 2);
@@ -1832,10 +1819,30 @@ body.tool-page .site-footer {
   }
 }
 
+@media (max-width: 900px) and (orientation: landscape) {
+  .vor-page {
+    --vor-chrome: 80px;
+    --vor-gutter: 8px;
+    padding-block: 8px 12px;
+  }
+  .vor-wrap {
+    width: calc(100% - var(--vor-gutter) * 2);
+  }
+  .vor-page .viz-box {
+    aspect-ratio: 16 / 9;
+    max-height: calc(100dvh - var(--vor-chrome));
+    min-height: 0;
+  }
+  .vor-prompt {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+}
+
 /* Short/landscape screens: give the visualization nearly everything. */
 @media (max-height: 720px) {
   .vor-page {
-    --vor-chrome: 70vw;
+    --vor-chrome: 70px;
   }
 }
 
