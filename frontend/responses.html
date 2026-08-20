@@ -2,7 +2,7 @@
 <html lang="en" class="response-document">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Visualization — QuantaCanvas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,6 +14,11 @@
 <link rel="icon" href="/assets/favicon.ico" type="image/x-icon" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
 <script>if (localStorage.getItem("qc-theme") === "light") document.documentElement.classList.add("light");</script>
+<script>
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock("landscape").catch(() => {});
+  }
+</script>
 </head>
 <body class="tool-page tool-response-page">
 <header class="site-header">

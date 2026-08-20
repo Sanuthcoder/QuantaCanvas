@@ -6,6 +6,7 @@
 <title>Volume of Revolution — QuantaCanvas Example</title>
 <meta name="description" content="An interactive QuantaCanvas scene explaining how volumes of revolution work, generated from a single plain-language prompt." />
 <meta property="og:type" content="website" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta property="og:title" content="Volume of Revolution — QuantaCanvas Example" />
 <meta property="og:description" content="An interactive QuantaCanvas scene explaining how volumes of revolution work." />
 <meta name="twitter:card" content="summary_large_image" />
@@ -15,6 +16,11 @@
 <link rel="stylesheet" href="../css/styles.css" />
 <link rel="icon" href="../assets/favicon.ico" type="image/x-icon" />
 <script>if (localStorage.getItem("qc-theme") === "light") document.documentElement.classList.add("light");</script>
+<script>
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock("landscape").catch(() => {});
+  }
+</script>
 </head>
 <body>
 

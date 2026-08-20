@@ -1839,6 +1839,12 @@ body.tool-page .site-footer {
   }
 }
 
+@media (max-width: 600px) {
+  .vor-page {
+    writing-mode: horizontal-tb;
+  }
+}
+
 .preview {
     position: relative;
     height: 250px;
