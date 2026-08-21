@@ -1093,8 +1093,8 @@ body.tool-page .site-footer {
 }
 
 .response-document {
-  overflow-x: hidden;
-  overflow-y: auto;
+  height: 100%;
+  overflow: hidden;
 }
 
 .tool-response-page .site-header,
@@ -1116,7 +1116,7 @@ body.tool-page .site-footer {
   flex: 1 1 auto;
   min-height: 0;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
 }
 
 .tool-response-workspace {
@@ -1126,8 +1126,8 @@ body.tool-page .site-footer {
   width: 100%;
   min-width: 860px;
   height: 100%;
-  min-height: 100dvh;
-  overflow: visible;
+  min-height: 0;
+  overflow: hidden;
   align-items: stretch;
 }
 
@@ -1482,8 +1482,8 @@ body.tool-page .site-footer {
   .tool-response-workspace {
     width: 860px;
     min-width: 860px;
-    height: 100dvh;
-    min-height: 720px;
+    height: 100%;
+    min-height: 0;
   }
 
   .tool-response-workspace #iframe-container,
