@@ -1086,19 +1086,22 @@ body.tool-page .site-footer {
 }
 
 .tool-response-page {
-  width: 100vw;
-  min-height: 100dvh;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: visible;
+  overflow-anchor: none;
 }
 
 .response-document {
   height: auto;
-  min-height: 100%;
-  overflow-x: hidden;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  overflow-anchor: none;
 }
 
 .tool-response-page .site-header,
@@ -1107,22 +1110,27 @@ body.tool-page .site-footer {
   flex: 0 0 auto;
 }
 
-
-
 .tool-response-page .site-header {
   position: sticky;
   top: 0;
   z-index: 50;
 }
 
+.tool-response-page .site-footer {
+  margin-bottom: 0;
+}
+
 .tool-response-content {
   width: 100%;
   flex: 0 0 auto;
+  height: 100dvh;
+  max-height: 100dvh;
   min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  height: 100dvh;
+  overflow-anchor: none;
 }
+
 
 .tool-response-workspace {
   display: flex;
@@ -1194,9 +1202,9 @@ body.tool-page .site-footer {
 .tool-response-workspace .tool-chats-container,
 .tool-response-workspace #chats {
   height: auto;
+  max-height: none;
   min-height: 0;
   flex: 1 1 auto;
-  max-height: none;
 }
 
 .tool-clarifications-heading {
@@ -1217,7 +1225,8 @@ body.tool-page .site-footer {
   padding: 10px;
   background: var(--input);
   z-index: 5;
-  overflow-y: auto;        
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 12px;
