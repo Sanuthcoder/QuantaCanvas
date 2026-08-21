@@ -1097,8 +1097,8 @@ body.tool-page .site-footer {
 .response-document {
   height: auto;
   min-height: 100%;
-  overflow-y: auto;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .tool-response-page .site-header,
@@ -1106,6 +1106,8 @@ body.tool-page .site-footer {
   display: block;
   flex: 0 0 auto;
 }
+
+
 
 .tool-response-page .site-header {
   position: sticky;
@@ -1116,12 +1118,11 @@ body.tool-page .site-footer {
 .tool-response-content {
   width: 100%;
   flex: 0 0 auto;
-  height: 100dvh;
   min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
+  height: 100dvh;
 }
-
 
 .tool-response-workspace {
   display: flex;
@@ -1193,9 +1194,9 @@ body.tool-page .site-footer {
 .tool-response-workspace .tool-chats-container,
 .tool-response-workspace #chats {
   height: auto;
-  max-height: none;
   min-height: 0;
   flex: 1 1 auto;
+  max-height: none;
 }
 
 .tool-clarifications-heading {
