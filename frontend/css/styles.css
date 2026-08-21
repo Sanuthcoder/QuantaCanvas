@@ -1087,7 +1087,7 @@ body.tool-page .site-footer {
 
 .tool-response-page {
   width: 100vw;
-  min-height: 100dvh;
+  min-height: 90dvh;
   display: block;
   overflow: visible;
 }
