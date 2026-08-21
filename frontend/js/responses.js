@@ -13,9 +13,11 @@
   let history = [];
   let isGeneratingReply = false;
   let isLeavingPage = false;
+  let hasVisualization = true;
 
   window.addEventListener("beforeunload", (event) => {
-    if (isLeavingPage) return;
+    if (isLeavingPage || !hasVisualization) return;
+
     event.preventDefault();
     event.returnValue = "Your visualization will remain available if you reload, but leaving may end this session.";
   });
@@ -33,6 +35,12 @@
     const destination = new URL(link.href, window.location.href);
     if (destination.href === window.location.href || destination.hash) return;
     event.preventDefault();
+    if (hasVisualization) {
+      const confirmed = window.confirm(
+        "Leaving this page will end your session with this visualization. Continue?"
+      );
+      if (!confirmed) return;
+    }
     leavePage(destination.href);
   });
 

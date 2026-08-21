@@ -101,8 +101,23 @@ def _register_user(user_id):
         print(f"[Supabase] user analytics failed: {error}", flush=True)
 
 
-def _create_generation(user_id):
+def _create_generation(user_id, prompt):
     if not supabase:
+        return None
+
+    generation_id = str(uuid.uuid4())
+    try:
+        supabase.table("generations").insert(
+            {
+                "id": generation_id,
+                "user_id": user_id or "anonymous",
+                "prompt": prompt,
+                "status": "pending",
+            }
+        ).execute()
+        return generation_id
+    except Exception as error:
+        print(f"[Supabase] generation start failed: {error}", flush=True)
         return None
 
 
@@ -131,15 +146,7 @@ def _enforce_generation_limit(user_id):
         raise
     except Exception as error:
         print(f"[Supabase] generation limit check failed: {error}", flush=True)
-    generation_id = str(uuid.uuid4())
-    try:
-        supabase.table("generations").insert(
-            {"id": generation_id, "user_id": user_id or "anonymous", "status": "pending"}
-        ).execute()
-        return generation_id
-    except Exception as error:
-        print(f"[Supabase] generation start failed: {error}", flush=True)
-        return None
+    
 
 
 def _finish_generation(generation_id, status, started):
@@ -208,7 +215,7 @@ def generate_visualization(user_prompt, user_id, static_dir=None):
     started = time.perf_counter()
     _register_user(user_id)
     _enforce_generation_limit(user_id)
-    generation_id = _create_generation(user_id)
+    generation_id = _create_generation(user_id, user_prompt)
     try:
         content = _call_model(
             f"{PROMPT}\n\nUSER REQUEST: {user_prompt}",

@@ -52,6 +52,7 @@ def generate():
     if not prompt:
         return jsonify(error="A prompt is required."), 400
 
+    
     try:
         result = generate_visualization(prompt, user_id)
         return jsonify(result)

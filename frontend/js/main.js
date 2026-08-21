@@ -293,6 +293,39 @@ document.querySelectorAll("[data-chip]").forEach((chip) => {
   }
 })();
 
+(() => {
+  const lightbox = document.getElementById("lightbox");
+  const openBtn = document.getElementById("openLightbox");
+  const closeBtn = document.getElementById("closeLightbox");
+  if (!lightbox || !openBtn || !closeBtn) return;
+
+  const video = lightbox.querySelector("video");
+
+  const openLightbox = () => {
+    lightbox.classList.add("active");
+    if (video) {
+      video.currentTime = 0;
+      video.play().catch(() => {});
+    }
+  };
+
+  const closeLightbox = () => {
+    lightbox.classList.remove("active");
+    if (video) video.pause();
+  };
+
+  openBtn.addEventListener("click", openLightbox);
+  closeBtn.addEventListener("click", closeLightbox);
+
+  lightbox.addEventListener("click", (event) => {
+    if (event.target === lightbox) closeLightbox();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && lightbox.classList.contains("active")) closeLightbox();
+  });
+})();
+
 document.querySelectorAll("[data-theme-toggle]").forEach((toggle) => {
 	toggle.addEventListener("click", () => {
 		const isLight = document.documentElement.classList.toggle("light");
