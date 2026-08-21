@@ -1125,7 +1125,7 @@ body.tool-page .site-footer {
   width: 100%;
   min-width: 860px;
   height: 100%;
-  min-height: 0;
+  min-height: 100dvh;
   overflow: visible;
   align-items: stretch;
 }
