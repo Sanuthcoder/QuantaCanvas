@@ -1,6 +1,3 @@
-/* QuantaCanvas — static HTML/CSS/JS build
-   Palette: deep indigo dark / cool paper light, cyan→violet glow */
-
 :root {
   --radius: 14px;
   --background: #24273a;
@@ -114,7 +111,7 @@ a {
   outline-offset: 2px;
 }
 
-/* Container overlay */
+
 .lightbox {
   display: none;
   position: fixed;
@@ -123,24 +120,24 @@ a {
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  padding: 20px; /* Safety padding for small screens */
+  padding: 20px; 
 }
 
 .lightbox.active {
   display: flex;
 }
 
-/* Content Wrapper */
+
 .lightbox-content {
   position: relative;
-  max-width: 90vw;  /* Max 90% of screen width */
-  max-height: 85vh; /* Max 85% of screen height */
+  max-width: 90vw;
+  max-height: 85vh; 
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-/* Video Fit Rules */
+
 .lightbox-content video {
   max-width: 100%;
   max-height: 85vh;
@@ -150,7 +147,7 @@ a {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
-/* Close Button Position */
+
 .close-btn {
   position: absolute;
   top: -40px;
@@ -225,7 +222,7 @@ a {
   box-shadow: none;
 }
 
-/* Buttons */
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -329,7 +326,7 @@ a {
 }
 
 
-/* Header */
+
 .site-header {
   position: sticky;
   top: 0;
@@ -500,7 +497,6 @@ a {
   background: color-mix(in srgb, var(--secondary) 60%, transparent);
 }
 
-/* ---------- Hero (split: copy left, live demo right) ---------- */
 .hero {
   position: relative;
   overflow: hidden;
@@ -581,7 +577,7 @@ a {
   font-size: 12px;
 }
 
-/* Demo embed */
+
 .demo-head {
   display: flex;
   align-items: center;
@@ -647,23 +643,17 @@ a {
 }
 
 .viz-box {
-  /* Scale width up to 100%, but automatically shrink if height hits 90dvh */
+  
   width: min(100%, calc(90dvh * (2 / 1)));
   aspect-ratio: 2 / 1;
-  
-  /* Fallback minimum height so it never gets too small on mobile portrait */
   min-height: 300px;
-  
   margin: 10px auto;
-  
-  /* Box styling */
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   border: 1px solid #000000;
 }
 
-/* Force iframe to fill 100% of the viz-box */
 .viz-box iframe {
   width: 100%;
   height: 100%;
@@ -671,7 +661,7 @@ a {
   display: block;
 }
 
-/* On vertical mobile phone screens, switch ratio so it stays tall & doesn't pull the footer up */
+
 @media (max-width: 600px) and (orientation: portrait) {
   .viz-box {
     aspect-ratio: 4 / 3;
@@ -679,7 +669,7 @@ a {
   }
 }
 
-/* Cards */
+
 .grid3 {
   display: grid;
   gap: 20px;
@@ -835,7 +825,7 @@ a {
   position: relative;
 }
 
-/* Filters */
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -865,7 +855,7 @@ a {
   font-weight: 600;
 }
 
-/* Tool (from the original NiceGUI screen) */
+
 body.tool-page {
   display: flex;
   flex-direction: column;
@@ -1069,7 +1059,7 @@ body.tool-page .site-footer {
   text-align: center;
 }
 
-/* Tool workspace (from tool.py /responses) */
+
 .tool-responses-view {
   display: flex;
   flex-direction: row;
@@ -1086,19 +1076,22 @@ body.tool-page .site-footer {
 }
 
 .tool-response-page {
-  width: 100vw;
-  min-height: 100dvh;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: visible;
+  overflow-anchor: none;
 }
 
 .response-document {
   height: auto;
-  min-height: 100%;
-  overflow-x: hidden;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  overflow-anchor: none;
 }
 
 .tool-response-page .site-header,
@@ -1107,22 +1100,27 @@ body.tool-page .site-footer {
   flex: 0 0 auto;
 }
 
-
-
 .tool-response-page .site-header {
   position: sticky;
   top: 0;
   z-index: 50;
 }
 
+.tool-response-page .site-footer {
+  margin-bottom: 0;
+}
+
 .tool-response-content {
   width: 100%;
   flex: 0 0 auto;
+  height: 100dvh;
+  max-height: 100dvh;
   min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  height: 100dvh;
+  overflow-anchor: none;
 }
+
 
 .tool-response-workspace {
   display: flex;
@@ -1130,7 +1128,7 @@ body.tool-page .site-footer {
   flex-wrap: nowrap;
   width: 100%;
   min-width: 860px;
-  height: 100%;
+  height: 100dvh;
   min-height: 0;
   overflow: hidden;
   align-items: stretch;
@@ -1194,9 +1192,9 @@ body.tool-page .site-footer {
 .tool-response-workspace .tool-chats-container,
 .tool-response-workspace #chats {
   height: auto;
+  max-height: none;
   min-height: 0;
   flex: 1 1 auto;
-  max-height: none;
 }
 
 .tool-clarifications-heading {
@@ -1217,7 +1215,8 @@ body.tool-page .site-footer {
   padding: 10px;
   background: var(--input);
   z-index: 5;
-  overflow-y: auto;        
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1353,7 +1352,7 @@ body.tool-page .site-footer {
   border-color: var(--primary);
 }
 
-/* Loading overlay (from tool.py) */
+
 .tool-overlay {
   position: fixed;
   top: 0;
@@ -1421,7 +1420,7 @@ body.tool-page .site-footer {
   background: rgba(239, 68, 68, 0.15);
 }
 
-/* Toast messages (matching tool.py .my-notify) */
+
 .qc-toast-stack {
   position: fixed;
   bottom: 24px;
@@ -1515,7 +1514,6 @@ body.tool-page .site-footer {
   }
 }
 
-/* About */
 .prose p {
   margin-top: 20px;
   font-size: 16.5px;
@@ -1545,7 +1543,6 @@ body.tool-page .site-footer {
   background-image: var(--glow-gradient);
 }
 
-/* Footer */
 .site-footer {
   border-top: 1px solid var(--border);
   background: color-mix(in srgb, var(--panel) 90%, transparent);
@@ -1651,7 +1648,6 @@ body.tool-page .site-footer {
   }
 }
 
-/* Follow-up chat section */
 .followup {
   align-items: center;
   gap: 32px;
@@ -1710,7 +1706,6 @@ body.tool-page .site-footer {
   }
 }
 
-/* Maximize / fullscreen button in embed bars */
 .maximize-btn,
 .embed-bar .maximize {
   margin-left: auto;
@@ -1755,21 +1750,15 @@ body.tool-page .site-footer {
   height: 100%;
 }
 
-/* Page-specific layout for the "Volume of revolution" example page.
-   Loaded after styles.css so it can refine shared tokens locally. */
-
 .vor-page {
-  /* Vertical chrome to reserve: header + footer + prompt line + breathing room */
+  
   --vor-chrome: 260px;
   --vor-gutter: 24px;
   padding-block: 28px 40px;
 }
 
-/* Shared container: identical max-width/padding to .nav so the prompt text,
-   the viz box and the nav content all sit on the same left/right edges. */
+
 .vor-wrap {
-  /* Width tracks the viz box exactly, so the prompt's left edge always lines up
-     with the box (and never exceeds the nav's content width). */
   width: min(90vw - var(--vor-gutter) * 2, calc((100dvh - var(--vor-chrome)) * 16 / 9));
   margin: 0 auto;
   padding-inline: 0;
@@ -1793,9 +1782,6 @@ body.tool-page .site-footer {
   margin-bottom: 6px;
 }
 
-/* Viz box: grow to the full container width, but never taller than the space
-   left on screen. Width is capped by the available height so the aspect ratio
-   is preserved instead of the box being clipped. */
 .vor-page .viz-box {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -1816,9 +1802,6 @@ body.tool-page .site-footer {
   border: 0;
 }
 
-
-
-/* Tablets and below: tighter gutters, taller ratio. */
 @media (max-width: 600px) and (orientation: portrait) {
   .vor-wrap {
     width: calc(100% - var(--vor-gutter) * 2);
@@ -1849,7 +1832,6 @@ body.tool-page .site-footer {
   }
 }
 
-/* Short/landscape screens: give the visualization nearly everything. */
 @media (max-height: 720px) {
   .vor-page {
     --vor-chrome: 70px;
