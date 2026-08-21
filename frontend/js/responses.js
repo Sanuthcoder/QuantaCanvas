@@ -20,7 +20,7 @@
     event.returnValue = "Your visualization will remain available if you reload, but leaving may end this session.";
   });
 
-  const leavePage = async (destination = "/tool.html") => {
+  const leavePage = async (destination = "../frontend/tool.html") => {
     if (isLeavingPage) return;
     isLeavingPage = true;
     if (id) sessionStorage.removeItem(`qc-viz-${id}`);

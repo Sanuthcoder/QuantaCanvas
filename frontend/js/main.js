@@ -51,11 +51,21 @@
 		 typePlaceholder(typewriterRunId);
 	 };
 
+	 
+
 	 const stopTypewriter = () => {
 		 typewriterRunning = false;
 		 typewriterRunId += 1;
 		 clearTimeout(typewriterTimer);
 	 };
+
+	 const urlPrompt = new URLSearchParams(window.location.search).get("prompt");
+	 if (urlPrompt) {
+	   promptInput.value = urlPrompt;
+	   promptInput.dispatchEvent(new Event("input"));
+	   stopTypewriter();
+	   promptInput.placeholder = "";
+	 }
 
 	 promptInput.addEventListener("input", () => {
 		 sendPrompt.disabled = !promptInput.value.trim();
@@ -66,6 +76,8 @@
 		 }
 	 });
 	 typePlaceholder(typewriterRunId);
+
+	 
 
 	const userId = () => {
 		let id = localStorage.getItem("quantacanvas_user_id");
@@ -164,6 +176,121 @@
 	});
 
 	abortButton.addEventListener("click", () => requestController?.abort());
+})();
+
+document.querySelectorAll("[data-chip]").forEach((chip) => {
+  const go = () => {
+    const text = chip.textContent.trim();
+    window.location.href = `/tool.html?prompt=${encodeURIComponent(text)}`;
+  };
+  chip.addEventListener("click", go);
+  chip.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") go(); });
+});
+
+// Overflow nav: hide links that don't fit, show ⋯ button with dropdown
+// Overflow nav: hide links that don't fit, show ⋯ button with dropdown
+(() => {
+  const navMenu = document.getElementById("navMenu");
+  const navLinks = document.getElementById("navLinks");
+  const moreBtn = document.getElementById("moreBtn");
+  const moreMenu = document.getElementById("moreMenu");
+  if (!navMenu || !navLinks || !moreBtn || !moreMenu) return;
+
+  const MOBILE_QUERY = window.matchMedia("(max-width: 760px)");
+
+  const cloneIntoMoreMenu = (li) => {
+    const a = li.querySelector("a");
+    if (!a) return;
+    const clone = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = a.href;
+    link.textContent = a.textContent;
+    clone.appendChild(link);
+    moreMenu.appendChild(clone);
+  };
+
+  const syncOverflow = () => {
+    const items = [...navLinks.querySelectorAll("li")];
+
+    // Reset state completely before measuring
+    moreMenu.innerHTML = "";
+    moreBtn.style.display = "none";
+    items.forEach((li) => {
+      li.style.display = "";
+    });
+
+    // Mobile viewport handling
+    if (MOBILE_QUERY.matches) {
+      items.forEach((li) => {
+        cloneIntoMoreMenu(li);
+      });
+      moreBtn.style.display = "inline-flex";
+      return;
+    }
+
+    // Force layout recalculation frame
+    const navRight = navMenu.getBoundingClientRect().right;
+
+    // First check: Do items overflow the navigation container right edge?
+    let overflowing = items.filter(
+      (li) => li.getBoundingClientRect().right > navRight
+    );
+
+    if (!overflowing.length) return;
+
+    // Show More button and measure its space
+    moreBtn.style.display = "inline-flex";
+    const moreLeft = moreBtn.getBoundingClientRect().left;
+
+    // Second check: Which items collide with the newly visible More button?
+    overflowing = items.filter(
+      (li) => li.getBoundingClientRect().right > moreLeft
+    );
+
+    overflowing.forEach((li) => {
+      li.style.display = "none";
+      cloneIntoMoreMenu(li);
+    });
+
+    if (!moreMenu.children.length) {
+      moreBtn.style.display = "none";
+    }
+  };
+
+  // Toggle dropdown
+  moreBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = moreMenu.classList.toggle("open");
+    moreBtn.setAttribute("aria-expanded", String(open));
+  });
+
+  document.addEventListener("click", () => {
+    moreMenu.classList.remove("open");
+    moreBtn.setAttribute("aria-expanded", "false");
+  });
+
+  moreMenu.addEventListener("click", (e) => e.stopPropagation());
+
+  // Debounced listener triggers instantly on continuous resizes
+  const handleResize = () => {
+    requestAnimationFrame(syncOverflow);
+  };
+
+  const ro = new ResizeObserver(handleResize);
+  ro.observe(navMenu);
+
+  window.addEventListener("resize", handleResize);
+  MOBILE_QUERY.addEventListener("change", handleResize);
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", handleResize);
+  } else {
+    handleResize();
+  }
+
+  if (document.fonts) {
+    document.fonts.ready.then(handleResize);
+  }
 })();
 
 document.querySelectorAll("[data-theme-toggle]").forEach((toggle) => {
