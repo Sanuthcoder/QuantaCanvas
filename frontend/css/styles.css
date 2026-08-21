@@ -1113,7 +1113,7 @@ body.tool-page .site-footer {
 
 .tool-response-content {
   width: 100%;
-  height: 100dvh;
+  height: 100vh;
   overflow-x: auto;
   overflow-y: visible;
 }
