@@ -91,13 +91,13 @@ window.addEventListener("online", () => {
 	 const urlPrompt = new URLSearchParams(window.location.search).get("prompt");
 	 if (urlPrompt) {
 	   promptInput.value = urlPrompt;
-	   promptInput.dispatchEvent(new Event("input"));
+	   updateSendState();
 	   stopTypewriter();
 	   promptInput.placeholder = "";
 	 }
 
 	 promptInput.addEventListener("input", () => {
-		 updateSendState()
+		 updateSendState();
 		 if (promptInput.value.trim()) {
 			 stopTypewriter();
 		 } else {
