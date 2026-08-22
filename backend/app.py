@@ -38,6 +38,14 @@ def favicon():
 
 @app.get("/<path:filename>")
 def frontend_file(filename):
+    candidate = FRONTEND_DIR / filename
+    if candidate.is_file():
+        return send_from_directory(FRONTEND_DIR, filename)
+
+    html_candidate = FRONTEND_DIR / f"{filename}.html"
+    if html_candidate.is_file():
+        return send_from_directory(FRONTEND_DIR, f"{filename}.html")
+
     return send_from_directory(FRONTEND_DIR, filename)
 
 
