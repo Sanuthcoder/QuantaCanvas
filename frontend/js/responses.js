@@ -170,7 +170,11 @@
       renderMathWhenReady(bubble);
       history.push({ role: "bot", text: reply });
     } catch (error) {
-      addMessage("bot", error.message);
+      if (!navigator.onLine || error instanceof TypeError) {
+        addMessage("bot", "Connection lost.Check you internet and try again.")
+      } else {
+        addMessage("bot", error.message);
+      }
     } finally {
       isGeneratingReply = false;
       updateSendState();

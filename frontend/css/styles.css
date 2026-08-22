@@ -1059,6 +1059,12 @@ body.tool-page .site-footer {
   text-align: center;
 }
 
+.tool-disclaimer-warn {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
 
 .tool-responses-view {
   display: flex;
@@ -1450,6 +1456,19 @@ body.tool-page .site-footer {
   animation: qc-toast-in 0.25s ease-out;
   max-width: 100%;
   text-align: center;
+}
+
+.qc-toast-info {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.qc-toast-negative {
+  border-color: color-mix(in srgb, #ef4444 55%, var(--border));
+  color: #ef4444;
+}
+
+.qc-toast-positive {
+  border-color: color-mix(in srgb, #4ade80 55%, var(--border));
 }
 
 @keyframes qc-toast-in {

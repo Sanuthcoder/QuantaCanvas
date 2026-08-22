@@ -1,3 +1,28 @@
+const showToast = (message, type = "info") => {
+		let stack = document.querySelector(".qc-toast-stack");
+		if (!stack) {
+			stack = document.createElement("div");
+			stack.className = "qc-toast-stack";
+			document.body.appendChild(stack);
+		}
+		const toast = document.createElement("div");
+		toast.className = `qc-toast qc-toast-${type}`;
+		toast.textContent = message;
+		stack.appendChild(toast);
+		setTimeout(() => toast.remove(), 4500);
+		setTimeout(() => {
+			if (!stack.children.length) stack.remove();
+		}, 4600);
+	};
+
+window.addEventListener("offline", () => {
+	showToast("Connection lost. Check your internet connection.", "negative");
+});
+
+window.addEventListener("online", () => {
+	showToast("Connection restored.");
+});
+
 (() => {
 	const promptForm = document.getElementById("promptForm");
 	if (!promptForm) return;
@@ -117,22 +142,7 @@
 		 }
 	};
 
-	const showToast = (message, type = "info") => {
-		let stack = document.querySelector(".qc-toast-stack");
-		if (!stack) {
-			stack = document.createElement("div");
-			stack.className = "qc-toast-stack";
-			document.body.appendChild(stack);
-		}
-		const toast = document.createElement("div");
-		toast.className = `qc-toast qc-toast-${type}`;
-		toast.textContent = message;
-		stack.appendChild(toast);
-		setTimeout(() => toast.remove(), 4500);
-		setTimeout(() => {
-			if (!stack.children.length) stack.remove();
-		}, 4600);
-	};
+	
 
 	const showWorkspace = (result, prompt) => {
 		const id = crypto.randomUUID();
@@ -187,8 +197,6 @@ document.querySelectorAll("[data-chip]").forEach((chip) => {
   chip.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") go(); });
 });
 
-// Overflow nav: hide links that don't fit, show ⋯ button with dropdown
-// Overflow nav: hide links that don't fit, show ⋯ button with dropdown
 (() => {
   const navMenu = document.getElementById("navMenu");
   const navLinks = document.getElementById("navLinks");
@@ -212,14 +220,12 @@ document.querySelectorAll("[data-chip]").forEach((chip) => {
   const syncOverflow = () => {
     const items = [...navLinks.querySelectorAll("li")];
 
-    // Reset state completely before measuring
     moreMenu.innerHTML = "";
     moreBtn.style.display = "none";
     items.forEach((li) => {
       li.style.display = "";
     });
 
-    // Mobile viewport handling
     if (MOBILE_QUERY.matches) {
       items.forEach((li) => {
         cloneIntoMoreMenu(li);
@@ -228,21 +234,19 @@ document.querySelectorAll("[data-chip]").forEach((chip) => {
       return;
     }
 
-    // Force layout recalculation frame
+    
     const navRight = navMenu.getBoundingClientRect().right;
 
-    // First check: Do items overflow the navigation container right edge?
+    
     let overflowing = items.filter(
       (li) => li.getBoundingClientRect().right > navRight
     );
 
     if (!overflowing.length) return;
 
-    // Show More button and measure its space
     moreBtn.style.display = "inline-flex";
     const moreLeft = moreBtn.getBoundingClientRect().left;
 
-    // Second check: Which items collide with the newly visible More button?
     overflowing = items.filter(
       (li) => li.getBoundingClientRect().right > moreLeft
     );
@@ -257,7 +261,6 @@ document.querySelectorAll("[data-chip]").forEach((chip) => {
     }
   };
 
-  // Toggle dropdown
   moreBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     const open = moreMenu.classList.toggle("open");
@@ -271,7 +274,6 @@ document.querySelectorAll("[data-chip]").forEach((chip) => {
 
   moreMenu.addEventListener("click", (e) => e.stopPropagation());
 
-  // Debounced listener triggers instantly on continuous resizes
   const handleResize = () => {
     requestAnimationFrame(syncOverflow);
   };
