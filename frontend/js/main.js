@@ -84,6 +84,10 @@ window.addEventListener("online", () => {
 		 clearTimeout(typewriterTimer);
 	 };
 
+	 const updateSendState = () => {
+		 sendPrompt.disabled = !promptInput.value.trim();
+	 };
+
 	 const urlPrompt = new URLSearchParams(window.location.search).get("prompt");
 	 if (urlPrompt) {
 	   promptInput.value = urlPrompt;
@@ -93,7 +97,7 @@ window.addEventListener("online", () => {
 	 }
 
 	 promptInput.addEventListener("input", () => {
-		 sendPrompt.disabled = !promptInput.value.trim();
+		 updateSendState()
 		 if (promptInput.value.trim()) {
 			 stopTypewriter();
 		 } else {
