@@ -35,5 +35,5 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
-          GEMINI_VISUALIZATION_MODELS: ${{ vars.GEMINI_VISUALIZATION_MODELS }}
+          GEMINI_VISUALIZATION_MODELS: ${{ secrets.GEMINI_VISUALIZATION_MODELS }}
         run: python worker.py --drain
