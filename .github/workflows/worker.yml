@@ -13,9 +13,8 @@ on:
 
 # Let a run finish; queue the next one instead of cancelling work in progress.
 concurrency:
-  group: quantacanvas-worker
-  cancel-in-progress: false
-
+  group: quantacanvas-worker-${{ github.run_id }}
+  
 jobs:
   drain:
     runs-on: ubuntu-latest
