@@ -1,0 +1,8 @@
+{
+  "crons": [
+    { "path": "/api/cron/cleanup_ips", "schedule": "0 3 * * *" }
+  ],
+  "functions": {
+    "api/**/*.py": { "maxDuration": 60 }
+  }
+}

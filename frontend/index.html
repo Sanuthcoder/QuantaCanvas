@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-CKDN24GD97"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', {
+    'analytics_storage': 'denied',
+    'ad_storage': 'denied'
+  });
+
+  gtag('js', new Date());
+  gtag('config', 'G-CKDN24GD97');
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>QuantaCanvas</title>
+<meta name="description" content="Describe any science or math concept and QuantaCanvas generates an interactive visualization built just for that prompt." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="QuantaCanvas — Visualize Any Concept" />
+<meta property="og:description" content="AI-generated interactive visualizations for science and math concepts." />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="canonical" href="https://quantacanvas.vercel.app/" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<link rel="icon" href="/assets/favicon.ico" type="image/x-icon" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Asimovian&display=swap" rel="stylesheet" />
+<script>if (localStorage.getItem("qc-theme") === "light") document.documentElement.classList.add("light");</script>
+
+</head>
+<body>
+<header class="site-header">
+  <nav class="nav">
+    <a class="brand" href="index.html">
+      <span class="brand-mark"><img src="assets/logo.png" alt="QuantaCanvas"></span>
+      <span class="brand-word" style="font-family: 'Asimovian', sans-serif; font-size: 24px; font-weight: 700;">Quanta<span class="c">Canvas</span></span>
+    </a>
+    <div class="nav-menu" id="navMenu">
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="examples.html">Examples</a></li>
+        <li><a href="contact.html">Contact</a></li>
+      </ul>
+      <button class="more-btn" id="moreBtn" aria-label="More menu" aria-expanded="false" type="button">⋯</button>
+      <ul class="more-menu" id="moreMenu"></ul>
+    </div>
+    <div class="nav-right">
+      <span class="gen-counter" id="genCounter" title="Daily generations remaining"></span>
+      <button class="icon-btn" data-theme-toggle type="button">☀</button>
+      <a class="btn" href="tool.html">Try it</a>
+    </div>
+  </nav>
+</header>
+
+<main>
+  
+  <section class="hero">
+    <div class="bg-grid grid-field"></div>
+
+    <div class="hero-split">
+      <div class="hero-copy">
+        <span class="pill"><span class="dot dot-radar"></span> Early preview — Experimental</span>
+        <h1>Turn any concept into<br /><span class="glow-text glow-text-animated">something you can see</span></h1>
+        <p class="lead">QuantaCanvas takes your prompt and builds an interactive visualization made for that exact question — no stock diagrams, no generic templates.</p>
+
+        <div class="hero-actions">
+          <a class="btn" href="tool.html">Try it. It's free.</a>
+          <a class="btn btn-ghost" href="examples.html">Browse examples</a>
+        </div>
+
+        <div class="chips-wrap">
+          <p class="chips-label" style="margin-top:26px;">Try a prompt:</p>
+          <div class="chips" style="margin-top:0;">
+            <span class="pill" data-chip tabindex="0" role="button">Visualize projectile motion</span>
+            <span class="pill" data-chip tabindex="0" role="button">Show how a capacitor charges</span>
+            <span class="pill" data-chip tabindex="0" role="button">Explain the photoelectric effect</span>
+            <span class="pill" data-chip tabindex="0" role="button">Visualize binary search</span>
+          </div>
+        </div>
+        <br>
+
+        
+      </div>
+
+      <div class="embed-shell">
+        <div class="panel embed">
+          <div class="embed-bar">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span>PROMPT: Visualize how adding more terms to a Maclaurin series approximates a function.</span>
+            <a href="examples/maclaurin.html" target="_blank" class="maximize-btn" aria-label="Expand visualization to fullscreen" title="Fullscreen">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+              </svg>
+            </a>
+            
+          </div>
+          <iframe
+            data-demo
+            src="examples/maclauriniframe.html"
+            title="QuantaCanvas example visualization: Maclaurin series approximation"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="wrap section">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Why it works</p>
+        <h2 style="margin-top:10px;">Built for the moment text stops helping</h2>
+      </div>
+    </div>
+    <div class="grid3" style="margin-top:36px;">
+      <article class="panel card">
+        <div class="bar"></div>
+        <h3>Prompt to canvas</h3>
+        <p>Describe the concept in plain words. The model writes a purpose-built interactive scene — not a stock diagram.</p>
+      </article>
+      <article class="panel card">
+        <div class="bar"></div>
+        <h3>Actually interactive</h3>
+        <p>Drag, scrub, and tune parameters. Intuition comes from watching things change, not from reading paragraphs.</p>
+      </article>
+      <article class="panel card">
+        <div class="bar"></div>
+        <h3>Built for study</h3>
+        <p>Made by a math/physics/CS student for the moments where text and static figures stop being enough.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap section">
+      <p class="eyebrow">Workflow</p>
+      <h2 style="margin-top:10px;">How it works</h2>
+      <div class="grid3" style="margin-top:40px;">
+        <div class="step"><span class="mono accent" style="font-size:13px;">01</span><h3>Write your prompt</h3><p>Any concept, any level of detail. Placeholder copy for the real flow.</p></div>
+        <div class="step"><span class="mono accent" style="font-size:13px;">02</span><h3>AI builds the scene</h3><p>Geometry, controls and animation are generated for that exact question.</p></div>
+        <div class="step"><span class="mono accent" style="font-size:13px;">03</span><h3>Explore &amp; tweak</h3><p>Adjust parameters live, then re-prompt to go deeper.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <div class="grid2 followup">
+      <div class="panel followup-frame">
+        <div class="embed-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span> // Follow-up chat</span>
+          <button class="maximize" id="openLightbox"><span></span>⛶</button>
+          
+
+          <div id="lightbox" class="lightbox">
+            <div class="lightbox-content">
+              <span id="closeLightbox" class="close-btn">&times;</span>
+              <video src="assets/followup-demo.mp4" controls muted controlsList="nodownload" oncontextmenu="return false;" disablePictureInPicture></video>
+            </div>
+          </div>
+        </div>
+        <div class="video-placeholder grid-field">
+          <div class="glow-bar"></div>
+          <video src="assets/followup-demo.mp4" autoplay muted loop playsinline></video>
+        </div>
+      </div>
+
+      <div class="followup-copy">
+        <p class="eyebrow">Follow-up chat</p>
+        <h2 style="margin-top:10px;">Ask about the scene you just generated</h2>
+        <p class="lead" style="margin-top:16px;">
+          Once your visualization is built, a chat panel opens beside the canvas.
+          Ask follow-up questions and get text answers — the scene stays as-is while you dig deeper.
+        </p>
+        <ul class="followup-list">
+          <li>Ask why a parameter behaves the way it does.</li>
+          <li>Get a step-by-step derivation of the formula or principle.</li>
+          <li>Change a variable in the chat and read the explanation.</li>
+        </ul>        
+      </div>
+    </div>
+  </section>
+
+  
+  <section class="wrap" style="padding-bottom:96px;">
+    <div class="panel cta">
+      <div class="glow-bar"></div>
+      <h2>Stop just reading about it. Watch it move.</h2>
+      <p class="muted" style="margin-top:12px;">Bring the concept you're stuck on. QuantaCanvas builds the picture.</p>
+      <a class="btn" style="margin-top:28px;" href="tool.html">Go to tool</a>
+    </div>
+  </section>
+</main>
+
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p>QuantaCanvas</p>
+    <div class="footer-links">
+      <a href="about.html">About</a>
+      <a href="examples.html">Examples</a>
+      <a href="tool.html">Tool</a>
+      <a href="contact.html">Contact</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>

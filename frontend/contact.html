@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-CKDN24GD97"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('consent', 'default', {
+      'analytics_storage': 'denied',
+      'ad_storage': 'denied'
+    });
+    gtag('js', new Date());
+    gtag('config', 'G-CKDN24GD97');
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contact — QuantaCanvas</title>
+  <meta name="description" content="Get in touch with the QuantaCanvas team — feedback, questions, or bug reports." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Contact — QuantaCanvas" />
+  <meta property="og:description" content="Send feedback, questions, or bug reports to the QuantaCanvas team." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="/assets/favicon.ico" type="image/x-icon" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Asimovian&display=swap" rel="stylesheet" />
+  <script>if (localStorage.getItem("qc-theme") === "light") document.documentElement.classList.add("light");</script>
+</head>
+
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="index.html">
+        <span class="brand-mark"><img src="assets/logo.png" alt="QuantaCanvas"></span>
+        <span class="brand-word"
+          style="font-family: 'Asimovian', sans-serif; font-size: 24px; font-weight: 700;">Quanta<span
+            class="c">Canvas</span></span>
+      </a>
+      <div class="nav-menu" id="navMenu">
+        <ul class="nav-links" id="navLinks">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="examples.html">Examples</a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+        <button class="more-btn" id="moreBtn" aria-label="More menu" aria-expanded="false" type="button">⋯</button>
+        <ul class="more-menu" id="moreMenu"></ul>
+      </div>
+      <div class="nav-right">
+        <span class="gen-counter" id="genCounter" title="Daily generations remaining"></span>
+        <button class="icon-btn" data-theme-toggle type="button">☀</button>
+        <a class="btn" href="tool.html">Try it</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="wrap-sm" style="width:90%;max-width:720px;padding-top:80px;padding-bottom:80px;">
+
+    <p class="mono accent" style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;">Contact</p>
+    <h1 style="margin-top:16px;font-size:clamp(32px,5vw,48px);font-weight:600;">
+      <span>Get in touch</span>
+    </h1>
+    <p class="muted" style="margin-top:16px;max-width:95vw;">Have feedback, a question, or a bug report? Drop us a
+      message and we'll get back to you.</p>
+
+    <div class="panel contact-card" style="margin-top:40px;">
+      <div class="glow-bar contact-glow"></div>
+      <form class="contact-form" id="contactForm" novalidate>
+        <input type="hidden" id="contactUserId" name="user_id" value="" />
+
+        <div class="contact-field">
+          <label class="contact-label" for="contactName">Name</label>
+          <input class="contact-input" id="contactName" name="name" type="text" required autocomplete="name"
+            placeholder="Your name" />
+        </div>
+
+        <div class="contact-field">
+          <label class="contact-label" for="contactEmail">Email</label>
+          <input class="contact-input" id="contactEmail" name="email" type="email" required autocomplete="email"
+            placeholder="you@example.com" />
+        </div>
+
+        <div class="contact-field">
+          <label class="contact-label" for="contactMessage">Message</label>
+          <textarea class="contact-input contact-textarea" id="contactMessage" name="message" rows="5" required
+            placeholder="Add message..."></textarea>
+        </div>
+
+        <button class="btn contact-submit" id="contactSubmit" type="submit">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+            <path d="M3 20.5 21 12 3 3.5v6.6l12.9 1.9L3 13.9v6.6Z" />
+          </svg>
+          Send message
+        </button>
+      </form>
+    </div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p>QuantaCanvas</p>
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="examples.html">Examples</a>
+        <a href="tool.html">Tool</a>
+        <a href="contact.html">Contact</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script defer src="/_vercel/insights/script.js"></script>
+  <script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+
+</html>

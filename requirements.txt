@@ -1,0 +1,6 @@
+python-dotenv
+google-genai
+supabase
+gunicorn
+Flask
+tzdata

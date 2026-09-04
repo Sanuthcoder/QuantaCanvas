@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How a DC Motor Works</title>
+    <!-- Tailwind CSS for modern layout utility -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- GSAP for robust animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <!-- Three.js for true 3D visualizer -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls for interactive 3D inspection -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- KaTeX for rendering high-fidelity equations -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #1e1e2e;
+            --panel: #181825;
+            --panel-light: #313244;
+            --text: #cdd6f4;
+            --muted: #6c7086;
+            --grid: #45475a;
+            --axis: #bac2de;
+            --accent1: #89b4fa; /* Blue (South Magnet) */
+            --accent2: #f5c2e7; /* Pink (North Magnet) */
+            --accent3: #a6e3a1; /* Green (Force Vector) */
+            --hover: #f9e2af;   /* Yellow (Current flow / Highlight) */
+            --visual-w: 55%;
+        }
+
+        html, body {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Split layout container */
+        #stage {
+            display: grid;
+            grid-template-columns: var(--visual-w) 6px minmax(0, 1fr);
+            grid-template-rows: minmax(0, 1fr);
+            height: calc(100vh - 64px - 48px); /* total height minus header & footer */
+            min-height: 0;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .pane {
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Interactive resizable divider */
+        .divider {
+            grid-column: 2;
+            height: 100%;
+            cursor: col-resize;
+            background-color: var(--grid);
+            transition: background-color 0.2s;
+            position: relative;
+            z-index: 10;
+        }
+        .divider:hover, .divider.dragging {
+            background-color: var(--accent1);
+        }
+        .divider::after {
+            content: '';
+            position: absolute;
+            left: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 2px;
+            height: 30px;
+            background-color: var(--text);
+            border-radius: 1px;
+            opacity: 0.5;
+        }
+
+        /* Equation wrapper */
+        .eq-wrap {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 0.5rem 0;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent1) transparent;
+        }
+        .eq-state {
+            display: inline-block;
+            white-space: nowrap;
+            min-width: max-content;
+            font-size: clamp(1rem, 2vw, 1.4rem);
+        }
+
+        /* Step cards transitions */
+        .step-card {
+            display: none;
+            opacity: 0;
+            height: 100%;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .step-card.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* Scrollbar styles */
+        ::-webkit-scrollbar {
+            height: 4px;
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--grid);
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent1);
+        }
+    </style>
+</head>
+<body class="flex flex-col">
+
+    <!-- Header Section -->
+    <header class="h-16 px-6 bg-[#11111b] border-b border-[#313244] flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <span class="p-2 rounded bg-[#313244] text-[var(--accent1)]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 111.063 1.06l-.041.02a.75.75 0 11-1.063-1.061zM11.25 11.25v6.75M12 21a9 9 0 110-18 9 9 0 010 18z" />
+                </svg>
+            </span>
+            <div>
+                <h1 class="text-lg font-bold tracking-wide">DC Motor</h1>
+                <p class="text-xs text-[var(--muted)]">Understanding Split-Ring Commutators</p>
+            </div>
+        </div>
+        <div class="text-xs bg-[#313244] text-[var(--text)] px-3 py-1.5 rounded-full font-mono flex items-center gap-1">
+            <span>Lesson Progress:</span>
+            <span id="lesson-progress-text" class="text-[var(--accent1)]">1 / 7</span>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div id="stage" class="bg-[var(--bg)]">
+        
+        <!-- Left Side: Interactive 3D Viewer -->
+        <div class="pane">
+            <div id="canvas-container" class="absolute inset-0"></div>
+            <!-- Interactive hints -->
+            <div class="absolute bottom-4 left-4 bg-[#11111b]/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs text-[var(--muted)] border border-[#313244] pointer-events-none">
+                Drag to orbit view ↺
+            </div>
+        </div>
+
+        <!-- Resizable Divider -->
+        <div class="divider" id="divider" role="separator" aria-orientation="vertical"></div>
+
+        <!-- Right Side: Explanatory Sidebar -->
+        <div class="pane bg-[var(--panel)] flex flex-col p-6 border-l border-[#313244] justify-between">
+            
+            <!-- Step Container -->
+            <div id="step-container" class="flex-1 min-height-0 overflow-y-auto pr-2">
+                
+                <!-- Step 0: Anatomy -->
+                <div class="step-card active" data-step="0">
+                    <div class="space-y-4">
+                        <span class="text-xs font-semibold tracking-wider uppercase text-[var(--accent1)] bg-[var(--panel-light)] px-2.5 py-1 rounded">1. Component Anatomy</span>
+                        <h2 class="text-2xl font-bold">The Core Components</h2>
+                        <p class="text-[var(--text)] text-sm leading-relaxed">
+                            A DC motor transforms **electrical energy** into **rotational mechanics**. It relies on the interaction between magnets and electricity.
+                        </p>
+                        <ul class="text-sm space-y-2 text-[var(--muted)]">
+                            <li class="flex items-start gap-2">
+                                <span class="text-[var(--accent2)] font-bold">■</span>
+                                <span><strong class="text-[var(--text)]">Stator:</strong> Permanent magnets providing a constant magnetic field.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-[var(--accent1)] font-bold">■</span>
+                                <span><strong class="text-[var(--text)]">Rotor:</strong> A rotating loop of wire (the armature coil) carrying current.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-[var(--hover)] font-bold">■</span>
+                                <span><strong class="text-[var(--text)]">Split-Ring Commutator:</strong> A pair of half-rings that rotates with the coil to handle current reversal.</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="mt-6">
+                        <div class="eq-wrap">
+                            <div class="eq-state">$$\text{Electrical Current} \longrightarrow \text{Rotational Force}$$</div>
+                        </div>
+                        <p class="text-xs text-[var(--muted)] mt-1">Examine the initial layout. Rotate the camera to see the gaps in the brass commutator rings.</p>
+                    </div>
+                </div>
+
+                <!-- Step 1: Magnetic Field -->
+                <div class="step-card" data-step="1">
+                    <div class="space-y-4">
+                        <span class="text-xs font-semibold tracking-wider uppercase text-[var(--accent1)] bg-[var(--panel-light)] px-2.5 py-1 rounded">2. Magnetic Field</span>
+                        <h2 class="text-2xl font-bold">The Magnetic Field ($\mathbf{B}$)</h2>
+                        <p class="text-[var(--text)] text-sm leading-relaxed">
+                            The permanent magnets produce a uniform magnetic flux density, denoted as vector $\mathbf{B}$. By convention, the field lines emerge from the <strong class="text-[var(--accent2)]">North Pole</strong> and enter the <strong class="text-[var(--accent1)]">South Pole</strong>.
+                        </p>
+                        <p class="text-[var(--text)] text-sm leading-relaxed">
+                            This field establishes the coordinate landscape through which current-carrying wires will experience a physical mechanical force.
+                        </p>
+                    </div>
+                    <div class="mt-6">
+                        <div class="eq-wrap">
+                            <div class="eq-state">$$\mathbf{B} = B \, \mathbf{\hat{i}}$$</div>
+                        </div>
+                        <p class="text-xs text-[var(--muted)] mt-1">The glowing vectors represent the horizontal magnetic field pointing left-to-right.</p>
+                    </div>
+                </div>
+
+                <!-- Step 2: Lorentz Force -->
+                <div class="step-card" data-step="2">
+                    <div class="space-y-4">
+                        <span class="text-xs font-semibold tracking-wider uppercase text-[var(--accent1)] bg-[var(--panel-light)] px-2.5 py-1 rounded">3. Electromagnetism</span>
+                        <h2 class="text-2xl font-bold">The Lorentz Force ($\mathbf{F}$)</h2>
+                        <p class="text-[var(--text)] text-sm leading-relaxed">
+                            When current $I$ passes through the loop, a moving charge experiences a magnetic force. The direction of this force on a wire segment of length $\mathbf{L}$ is given by the cross product:
+                        </p>
+                    </div>
+                    <div class="mt-6">
+                        <div class="eq-wrap">
+                            <div class="eq-state" data-eq="0">$$\mathbf{F} = I(\mathbf{L} \times \mathbf{B})$$</div>
+                            <div class="eq-state" data-eq="1" style="display: none;">$$\mathbf{F} = I \cdot L \cdot B \sin(\theta) \, \mathbf{\hat{j}}$$</div>
+                        </div>
+                        <!-- Local Equation Controls -->
+                        <div class="eq-controls flex items-center justify-between bg-[var(--panel-light)] px-3 py-1.5 rounded mt-2">
+                            <button class="eq-btn prev-eq text-xs text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-30" disabled>◀ Prev Equation</button>
+                            <span class="eq-indicator text-xs font-mono">1 / 2</span>
+                            <button class="eq-btn next-eq text-xs text-[var(--muted)] hover:text-[var(--text)]">Next Equation ▶</button>
+                        </div>
+                        <p class="text-xs text-[var(--muted)] mt-3">Yellow particles show current flow direction. Green arrows show the opposite vertical forces acting on opposite sides of the coil.</p>
+                    </div>
+                </div>
+
+                <!-- Step 3: Torque -->
+                <div class="step-card" data-step="3">
+                    <div class="space-y-4">
+                        <span class="text-xs font-semibold tracking-wider uppercase text-[var(--accent1)] bg-[var(--panel-light)] px-2.5 py-1 rounded">4. Rotation Mechanics</span>
+                        <h2 class="text-2xl font-bold">Generating Torque ($\boldsymbol{\tau}$)</h2>
+                        <p class="text-[var(--text)] text-sm leading-relaxed">
+                            Because current flows *away* on one side of the coil and *towards* you on the other, the forces act in opposite directions (one UP, one DOWN). 
+                        </p>
+                        <p class="text-[var(--text)] text-sm leading-relaxed">
+                            This force couple creates a rotational moment or **Torque** ($\boldsymbol{\tau}$), causing the armature to rotate around its central shaft.
+                        </p>
+                    </div>
+                    <div class="mt-6">
+                        <div class="eq-wrap">
+                            <div class="eq-state">$$\boldsymbol{\tau} = \mathbf{r} \times \mathbf{F}$$</div>
+                        </div>
+                        <p class="text-xs text-[var(--muted)] mt-1">Watch how the forces pull the loop into rotation. This torque drives the physical rotation of the motor.</p>
+                    </div>
+                </div>
+
+                <!-- Step 4: Dead Point -->
+                <div class="step-card" data-step="4">
+                    <div class="space-y-4">
+                        <span class="text-xs font-semibold tracking-wider uppercase text-[var(--accent1)] bg-[var(--panel-light)] px-2.5 py-1 rounded">5. The Engineering Problem</span>
+                        <h2 class="text-2xl font-bold">The Stall Point (90°)</h2>
+                        <p class="text-[var(--text)] text-sm leading-relaxed">
+                            At exactly $90^\circ$ (vertical position), the forces pull directly outward and inward. The perpendicular lever arm is zero, causing the torque to drop to zero.
+                        </p>
+                        <p class="text-[var(--text)] text-sm leading-relaxed">
+                            If the current direction remained the same past this point, the forces would reverse the loop's direction, leading to oscillation rather than rotation.
+                        </p>
+                    </div>
+                    <div class="mt-6">
+                        <div class="eq-wrap">
+                            <div class="eq-state">$$\theta = 90^\circ \implies \boldsymbol{\tau} = \mathbf{0}$$</div>
+                        </div>
+                        <p class="text-xs text-[var(--muted)] mt-1">Look closely: At $90^\circ$, the brushes align with the insulating gap in the commutator. Current drops to zero ($I = 0$).</p>
+                    </div>
+                </div>
+
+                <!-- Step 5: Commutation -->
+                <div class="step-card" data-step="5">
+                    <div class="space-y-4">
+                        <span class="text-xs font-semibold tracking-wider uppercase text-[var(--accent1)] bg-[var(--panel-light)] px-2.5 py-1 rounded">6. The Solution</span>
+                        <h2 class="text-2xl font-bold">Split-Ring Action</h2>
+                        <p class="text-[var(--text)] text-sm leading-relaxed">
+                            To maintain continuous rotation, the current in the loop must reverse direction the instant it passes the vertical plane.
+                        </p>
+                        <p class="text-[var(--text)] text-sm leading-relaxed">
+                            The **split-ring commutator** solves this. As the loop rotates past $90^\circ$, each half-ring automatically swaps contact to the opposite brush, reversing the current direction inside the coil so that force remains UP on the left and DOWN on the right!
+                        </p>
+                    </div>
+                    <div class="mt-6">
+                        <div class="eq-wrap">
+                            <div class="eq-state">$$\text{Brush}_1 \leftrightarrow \text{Ring A} \quad \text{Brush}_2 \leftrightarrow \text{Ring B}$$</div>
+                        </div>
+                        <p class="text-xs text-[var(--muted)] mt-1">Observe the loop oscillating around the swap point. Notice current flipping to keep forces pushing the correct way.</p>
+                    </div>
+                </div>
+
+                <!-- Step 6: Simulation -->
+                <div class="step-card" data-step="6">
+                    <div class="space-y-4">
+                        <span class="text-xs font-semibold tracking-wider uppercase text-[var(--accent3)] bg-[var(--panel-light)] px-2.5 py-1 rounded">7. Sandbox</span>
+                        <h2 class="text-2xl font-bold">Continuous Rotation</h2>
+                        <p class="text-[var(--text)] text-sm leading-relaxed">
+                            With the commutator working continuously, the coil experiences constant, unidirectional rotational torque, spinning smoothly.
+                        </p>
+
+                        <!-- Controls Panel -->
+                        <div class="bg-[var(--panel-light)] p-4 rounded-lg space-y-3 mt-2 border border-[#45475a]">
+                            <div class="flex items-center justify-between gap-2">
+                                <button id="play-pause-btn" class="flex-1 bg-[var(--accent1)] text-[var(--bg)] font-bold py-1.5 px-3 rounded text-xs hover:opacity-90 transition">Pause</button>
+                                <button id="reset-btn" class="flex-1 bg-transparent border border-[var(--muted)] text-[var(--text)] py-1.5 px-3 rounded text-xs hover:bg-[var(--panel)] transition">Reset</button>
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-xs text-[var(--muted)]">
+                                    <span>Motor Speed:</span>
+                                    <span id="speed-val" class="text-[var(--accent1)]">1.0x</span>
+                                </div>
+                                <input type="range" id="speed-slider" class="w-full accent-[var(--accent1)] cursor-pointer h-1 rounded" min="0" max="3" step="0.1" value="1">
+                            </div>
+                            <div class="space-y-2 pt-2 border-t border-[#45475a] text-xs">
+                                <label class="flex items-center gap-2 cursor-pointer hover:text-[var(--accent1)]">
+                                    <input type="checkbox" id="toggle-field" checked class="accent-[var(--accent1)]">
+                                    <span>Show Field Lines ($\mathbf{B}$)</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer hover:text-[var(--accent1)]">
+                                    <input type="checkbox" id="toggle-current" checked class="accent-[var(--accent1)]">
+                                    <span>Show Current ($I$)</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer hover:text-[var(--accent1)]">
+                                    <input type="checkbox" id="toggle-forces" checked class="accent-[var(--accent1)]">
+                                    <span>Show Forces ($\mathbf{F}$)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <div class="eq-wrap">
+                            <div class="eq-state">$$\boldsymbol{\tau}_{\text{avg}} > 0 \implies \text{Continuous Work!}$$</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer Step Controls -->
+            <footer class="mt-6 pt-4 border-t border-[#313244] flex items-center justify-between shrink-0">
+                <button id="prev-step" class="bg-[var(--panel-light)] hover:bg-[#494d64] text-[var(--text)] px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-30 disabled:pointer-events-none">
+                    ◀ Previous Step
+                </button>
+                <div class="flex gap-1.5" id="step-dots">
+                    <!-- Dots dynamically generated -->
+                </div>
+                <button id="next-step" class="bg-[var(--accent1)] hover:opacity-90 text-[var(--bg)] px-4 py-2 rounded-lg text-sm font-semibold transition">
+                    Next Step ▶
+                </button>
+            </footer>
+
+        </div>
+    </div>
+
+    <!-- Page Footer (Shortcuts) -->
+    <footer class="h-12 bg-[#11111b] border-t border-[#313244] px-6 flex items-center justify-between shrink-0 text-xs text-[var(--muted)]">
+        <div>Keyboard Shortcuts: <kbd class="bg-[#313244] px-1.5 py-0.5 rounded text-[var(--text)]">←</kbd> / <kbd class="bg-[#313244] px-1.5 py-0.5 rounded text-[var(--text)]">→</kbd> navigate inside steps / equations</div>
+        <div>Split Layout: Drag the middle bar to adjust width</div>
+    </footer>
+
+    <!-- Logic Script -->
+    <script>
+        // Setup Catppuccin mocha palette matching CSS variables
+        const THEME = {
+            bg: '#1e1e2e',
+            panel: '#181825',
+            text: '#cdd6f4',
+            muted: '#6c7086',
+            grid: '#45475a',
+            axis: '#bac2de',
+            accent1: '#89b4fa',
+            accent2: '#f5c2e7',
+            accent3: '#a6e3a1',
+            hover: '#f9e2af'
+        };
+
+        // UI state variables
+        let currentStep = 0;
+        let currentEqState = 0;
+        const totalSteps = 7;
+
+        // Interactive motor physics state
+        const motorState = {
+            angle: 0.2,            // current rotor angle in radians
+            targetAngle: 0.2,      // target angle when not running
+            speed: 1.0,            // speed multiplier
+            isRunning: false,      // is motor continuously spinning?
+            showField: false,
+            showCurrent: false,
+            showForce: false,
+            currentDir: 1,         // direction of current in wire
+            particleSpeed: 0.04    // particle flow speed
+        };
+
+        let activeTween = null;
+        let particlesProgress = 0; // cumulative track for current flows
+
+        // Dynamic elements for step tracking
+        const stepCards = document.querySelectorAll('.step-card');
+        const prevBtn = document.getElementById('prev-step');
+        const nextBtn = document.getElementById('next-step');
+        const stepProgressText = document.getElementById('lesson-progress-text');
+        const dotsContainer = document.getElementById('step-dots');
+
+        // Generator for step navigation indicator dots
+        function buildProgressDots() {
+            dotsContainer.innerHTML = '';
+            for (let i = 0; i < totalSteps; i++) {
+                const dot = document.createElement('div');
+                dot.className = `w-2 h-2 rounded-full transition ${i === currentStep ? 'bg-[var(--accent1)] scale-125' : 'bg-[#313244]'}`;
+                dotsContainer.appendChild(dot);
+            }
+        }
+
+        // Initialize KaTeX formulas
+        function initMath() {
+            stepCards.forEach(card => {
+                safeAutoRender(card);
+            });
+        }
+
+        // Standard KaTeX safe auto renderer helper
+        function safeAutoRender(rootElement) {
+            const tryRender = setInterval(() => {
+                if (typeof window.renderMathInElement !== 'undefined') {
+                    clearInterval(tryRender);
+                    window.renderMathInElement(rootElement, {
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '$',  right: '$',  display: false},
+                            {left: '\\(', right: '\\)', display: false},
+                            {left: '\\[', right: '\\]', display: true}
+                        ],
+                        throwOnError: false,
+                        ignoredTags: ['script','noscript','style','textarea','pre','code','option']
+                    });
+                }
+            }, 50);
+        }
+
+        // Equation state control inside step 2
+        function initLocalEquationControls() {
+            const step2Card = document.querySelector('.step-card[data-step="2"]');
+            if (!step2Card) return;
+
+            const nextEqBtn = step2Card.querySelector('.next-eq');
+            const prevEqBtn = step2Card.querySelector('.prev-eq');
+            const eqStates = step2Card.querySelectorAll('.eq-state');
+            const eqIndicator = step2Card.querySelector('.eq-indicator');
+
+            function updateEqVisibility() {
+                eqStates.forEach((eq, idx) => {
+                    if (idx === currentEqState) {
+                        gsap.killTweensOf(eq);
+                        gsap.set(eq, { display: 'inline-block', opacity: 0, x: 10 });
+                        gsap.to(eq, { opacity: 1, x: 0, duration: 0.3 });
+                    } else {
+                        eq.style.display = 'none';
+                    }
+                });
+                eqIndicator.textContent = `${currentEqState + 1} / ${eqStates.length}`;
+                prevEqBtn.disabled = currentEqState === 0;
+                nextEqBtn.disabled = currentEqState === eqStates.length - 1;
+                prevEqBtn.style.opacity = currentEqState === 0 ? '0.3' : '1';
+                nextEqBtn.style.opacity = currentEqState === eqStates.length - 1 ? '0.3' : '1';
+            }
+
+            nextEqBtn.addEventListener('click', () => {
+                if (currentEqState < eqStates.length - 1) {
+                    currentEqState++;
+                    updateEqVisibility();
+                }
+            });
+
+            prevEqBtn.addEventListener('click', () => {
+                if (currentEqState > 0) {
+                    currentEqState--;
+                    updateEqVisibility();
+                }
+            });
+        }
+
+        // Core step transition rules
+        function applySceneStateForStep(stepIndex) {
+            // Kill any active manual/oscillation tweens
+            if (activeTween) {
+                activeTween.kill();
+                activeTween = null;
+            }
+
+            motorState.isRunning = false;
+
+            switch(stepIndex) {
+                case 0: // Components (Quiet, static view)
+                    motorState.targetAngle = 0.35;
+                    motorState.showField = false;
+                    motorState.showCurrent = false;
+                    motorState.showForce = false;
+                    break;
+                case 1: // Field Lines Only
+                    motorState.targetAngle = 0.35;
+                    motorState.showField = true;
+                    motorState.showCurrent = false;
+                    motorState.showForce = false;
+                    break;
+                case 2: // Lorentz Force static
+                    motorState.targetAngle = 0.35;
+                    motorState.showField = true;
+                    motorState.showCurrent = true;
+                    motorState.showForce = true;
+                    break;
+                case 3: // Torque Oscillation (Slow rotation swing)
+                    motorState.showField = true;
+                    motorState.showCurrent = true;
+                    motorState.showForce = true;
+                    motorState.targetAngle = -0.1;
+                    activeTween = gsap.to(motorState, {
+                        targetAngle: 0.8,
+                        duration: 2.2,
+                        repeat: -1,
+                        yoyo: true,
+                        ease: "sine.inOut"
+                    });
+                    break;
+                case 4: // Dead point exactly 90 degrees (Insulating gap)
+                    motorState.targetAngle = Math.PI / 2; // vertical
+                    motorState.showField = true;
+                    motorState.showCurrent = false; // insulating gap disconnects
+                    motorState.showForce = false;
+                    break;
+                case 5: // Commutation Action (Oscillate around 90)
+                    motorState.showField = true;
+                    motorState.showCurrent = true;
+                    motorState.showForce = true;
+                    motorState.targetAngle = Math.PI / 2 - 0.3; // oscillate past gap
+                    activeTween = gsap.to(motorState, {
+                        targetAngle: Math.PI / 2 + 0.3,
+                        duration: 2.5,
+                        repeat: -1,
+                        yoyo: true,
+                        ease: "sine.inOut"
+                    });
+                    break;
+                case 6: // Sandbox Simulation
+                    motorState.isRunning = true;
+                    // Read active sandbox values from DOM
+                    motorState.showField = document.getElementById('toggle-field').checked;
+                    motorState.showCurrent = document.getElementById('toggle-current').checked;
+                    motorState.showForce = document.getElementById('toggle-forces').checked;
+                    motorState.speed = parseFloat(document.getElementById('speed-slider').value);
+                    const isPlay = document.getElementById('play-pause-btn').innerText === "Pause";
+                    motorState.isRunning = isPlay;
+                    break;
+            }
+        }
+
+        // Navigate to top-level steps
+        function goToStep(stepIndex) {
+            if (stepIndex < 0 || stepIndex >= totalSteps) return;
+
+            // Fade out current step card
+            const currentCard = document.querySelector('.step-card.active');
+            const targetCard = document.querySelector(`.step-card[data-step="${stepIndex}"]`);
+
+            gsap.to(currentCard, {
+                opacity: 0,
+                duration: 0.2,
+                onComplete: () => {
+                    currentCard.classList.remove('active');
+                    targetCard.classList.add('active');
+                    
+                    gsap.fromTo(targetCard, 
+                        { opacity: 0, y: 10 },
+                        { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' }
+                    );
+
+                    currentStep = stepIndex;
+                    currentEqState = 0; // reset local equations pointer
+                    
+                    // Manage button disable limits
+                    prevBtn.disabled = currentStep === 0;
+                    nextBtn.disabled = currentStep === totalSteps - 1;
+                    nextBtn.innerText = currentStep === totalSteps - 1 ? 'Finished ✔' : 'Next Step ▶';
+                    
+                    stepProgressText.textContent = `${currentStep + 1} / ${totalSteps}`;
+                    buildProgressDots();
+
+                    // Load specific physical arrangements
+                    applySceneStateForStep(currentStep);
+                }
+            });
+        }
+
+        // Navigation button listeners
+        prevBtn.addEventListener('click', () => {
+            if (currentStep > 0) goToStep(currentStep - 1);
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentStep < totalSteps - 1) {
+                goToStep(currentStep + 1);
+            }
+        });
+
+        // Global Keyboard Event Hooks
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') {
+                // If on Step 2, let local equation advance first
+                if (currentStep === 2) {
+                    const step2Card = document.querySelector('.step-card[data-step="2"]');
+                    const eqStates = step2Card.querySelectorAll('.eq-state');
+                    if (currentEqState < eqStates.length - 1) {
+                        step2Card.querySelector('.next-eq').click();
+                        return;
+                    }
+                }
+                if (currentStep < totalSteps - 1) goToStep(currentStep + 1);
+            } else if (e.key === 'ArrowLeft') {
+                if (currentStep === 2 && currentEqState > 0) {
+                    const step2Card = document.querySelector('.step-card[data-step="2"]');
+                    step2Card.querySelector('.prev-eq').click();
+                    return;
+                }
+                if (currentStep > 0) goToStep(currentStep - 1);
+            }
+        });
+
+
+        /* ==========================================
+           THREE.JS MOTOR VISUALIZATION MOTOR ENGINE
+           ========================================== */
+
+        class MotorVisualizer {
+            constructor(containerId) {
+                this.container = document.getElementById(containerId);
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.controls = null;
+
+                // Motor references
+                this.rotorGroup = null;
+                this.staticGroup = null;
+                
+                // Parts
+                this.coilWire = null;
+                this.commRingA = null;
+                this.commRingB = null;
+                this.leftForceArrow = null;
+                this.rightForceArrow = null;
+                
+                // Collections
+                this.fieldArrows = [];
+                this.currentParticles = [];
+                this.particlePositions = [];
+
+                this.init();
+            }
+
+            init() {
+                // Setup 3D environment
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(THEME.bg);
+
+                this.camera = new THREE.PerspectiveCamera(40, this.container.clientWidth / this.container.clientHeight, 0.1, 50);
+                this.camera.position.set(6, 4.5, 7.5);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.container.appendChild(this.renderer.domElement);
+
+                // Add mouse camera orbits
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.maxPolarAngle = Math.PI / 2 + 0.15; // constrain under-floor look
+
+                // Lighting rigs
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+                this.scene.add(ambientLight);
+
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+                dirLight.position.set(5, 12, 8);
+                dirLight.castShadow = true;
+                this.scene.add(dirLight);
+
+                const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+                fillLight.position.set(-6, -3, -4);
+                this.scene.add(fillLight);
+
+                // Grid background
+                const grid = new THREE.GridHelper(16, 16, THEME.grid, THEME.grid);
+                grid.position.y = -2.2;
+                grid.material.opacity = 0.25;
+                grid.material.transparent = true;
+                this.scene.add(grid);
+
+                // Instantiation
+                this.rotorGroup = new THREE.Group();
+                this.staticGroup = new THREE.Group();
+                this.scene.add(this.rotorGroup);
+                this.scene.add(this.staticGroup);
+
+                this.buildMotorArchitecture();
+                this.buildFieldLines();
+                this.buildForceArrows();
+                this.buildCurrentParticles();
+
+                // Start loop
+                this.animate = this.animate.bind(this);
+                this.animate();
+            }
+
+            buildMotorArchitecture() {
+                // 1. Permanent Magnets (Stator)
+                const magnetGeo = new THREE.BoxGeometry(1.4, 2.5, 4.0);
+                
+                // North Magnet (Left, colored Accent 2)
+                const nMagnetMat = new THREE.MeshStandardMaterial({ 
+                    color: THEME.accent2, 
+                    roughness: 0.4, 
+                    metalness: 0.2 
+                });
+                const nMagnet = new THREE.Mesh(magnetGeo, nMagnetMat);
+                nMagnet.position.set(-3.2, 0, 0);
+                this.staticGroup.add(nMagnet);
+
+                // South Magnet (Right, colored Accent 1)
+                const sMagnetMat = new THREE.MeshStandardMaterial({ 
+                    color: THEME.accent1, 
+                    roughness: 0.4, 
+                    metalness: 0.2 
+                });
+                const sMagnet = new THREE.Mesh(magnetGeo, sMagnetMat);
+                sMagnet.position.set(3.2, 0, 0);
+                this.staticGroup.add(sMagnet);
+
+                // Labeling Poles
+                const nLabel = this.createPoleLabel('N');
+                nLabel.position.set(-2.45, 0.6, 0);
+                nLabel.rotation.y = Math.PI / 2;
+                this.staticGroup.add(nLabel);
+
+                const sLabel = this.createPoleLabel('S');
+                sLabel.position.set(2.45, 0.6, 0);
+                sLabel.rotation.y = -Math.PI / 2;
+                this.staticGroup.add(sLabel);
+
+                // 2. Center Steel Shaft (Rotor)
+                const shaftGeo = new THREE.CylinderGeometry(0.1, 0.1, 5.2, 16);
+                const shaftMat = new THREE.MeshStandardMaterial({ color: '#5b6078', roughness: 0.2, metalness: 0.8 });
+                const shaft = new THREE.Mesh(shaftGeo, shaftMat);
+                shaft.rotation.x = Math.PI / 2;
+                this.rotorGroup.add(shaft);
+
+                // 3. Coil Wire Loop (Rotor)
+                // Defining sharp points of wire track
+                this.coilPath = [
+                    new THREE.Vector3(-0.16, 0, -2.1), // Segment start commutator A
+                    new THREE.Vector3(-0.16, 0, -1.6),
+                    new THREE.Vector3(-1.3, 0, -1.6),  // left corner
+                    new THREE.Vector3(-1.3, 0, 1.6),   // far left corner
+                    new THREE.Vector3(1.3, 0, 1.6),    // far right corner
+                    new THREE.Vector3(1.3, 0, -1.6),   // right corner
+                    new THREE.Vector3(0.16, 0, -1.6),
+                    new THREE.Vector3(0.16, 0, -2.1)   // Segment end commutator B
+                ];
+
+                const wireMaterial = new THREE.MeshStandardMaterial({ 
+                    color: THEME.hover, // Copper color highlight
+                    roughness: 0.1, 
+                    metalness: 0.9 
+                });
+
+                for (let i = 0; i < this.coilPath.length - 1; i++) {
+                    const segment = this.createCylinderSegment(this.coilPath[i], this.coilPath[i+1], 0.05, wireMaterial);
+                    this.rotorGroup.add(segment);
+                }
+
+                // 4. Split-Ring Commutator (Rotor)
+                // Two separate halves centered at z = -2.1
+                const ringMatA = new THREE.MeshStandardMaterial({ color: '#f5a97f', roughness: 0.2, metalness: 0.8 }); // Commutator 1 (Copperish)
+                const ringMatB = new THREE.MeshStandardMaterial({ color: '#c6a0f6', roughness: 0.2, metalness: 0.8 }); // Commutator 2 (Purplish)
+
+                // CylinderGeometry (radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength)
+                const ringGeoA = new THREE.CylinderGeometry(0.24, 0.24, 0.45, 24, 1, true, 0.08, Math.PI - 0.16);
+                this.commRingA = new THREE.Mesh(ringGeoA, ringMatA);
+                this.commRingA.rotation.x = Math.PI / 2;
+                this.commRingA.position.set(0, 0, -2.1);
+                this.rotorGroup.add(this.commRingA);
+
+                const ringGeoB = new THREE.CylinderGeometry(0.24, 0.24, 0.45, 24, 1, true, Math.PI + 0.08, Math.PI - 0.16);
+                this.commRingB = new THREE.Mesh(ringGeoB, ringMatB);
+                this.commRingB.rotation.x = Math.PI / 2;
+                this.commRingB.position.set(0, 0, -2.1);
+                this.rotorGroup.add(this.commRingB);
+
+                // 5. Brushes (Static Carbon Contacts)
+                const brushGeo = new THREE.BoxGeometry(0.16, 0.16, 0.35);
+                const brushMat = new THREE.MeshStandardMaterial({ color: '#313244', roughness: 0.8 });
+                
+                const leftBrush = new THREE.Mesh(brushGeo, brushMat);
+                leftBrush.position.set(-0.31, 0, -2.1);
+                this.staticGroup.add(leftBrush);
+
+                const rightBrush = new THREE.Mesh(brushGeo, brushMat);
+                rightBrush.position.set(0.31, 0, -2.1);
+                this.staticGroup.add(rightBrush);
+            }
+
+            createPoleLabel(text) {
+                // Procedural high fidelity 3D shapes for 'N' and 'S' to remain 100% offline and robust
+                const group = new THREE.Group();
+                const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                if (text === 'N') {
+                    const l1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.7, 0.08), mat); l1.position.x = -0.22;
+                    const l2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.7, 0.08), mat); l2.position.x = 0.22;
+                    const diag = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.78, 0.08), mat);
+                    diag.rotation.z = -Math.PI / 5.5;
+                    group.add(l1, l2, diag);
+                } else {
+                    const top = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.08, 0.08), mat); top.position.y = 0.31;
+                    const mid = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.08, 0.08), mat); mid.position.y = 0;
+                    const bot = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.08, 0.08), mat); bot.position.y = -0.31;
+                    const tl = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.31, 0.08), mat); tl.position.set(-0.14, 0.16, 0);
+                    const br = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.31, 0.08), mat); br.position.set(0.14, -0.16, 0);
+                    group.add(top, mid, bot, tl, br);
+                }
+                return group;
+            }
+
+            createCylinderSegment(p1, p2, r, material) {
+                const direction = new THREE.Vector3().subVectors(p2, p1);
+                const length = direction.length();
+                const geom = new THREE.CylinderGeometry(r, r, length, 8);
+                geom.translate(0, length / 2, 0);
+                const mesh = new THREE.Mesh(geom, material);
+                mesh.position.copy(p1);
+                mesh.lookAt(p2);
+                mesh.rotateX(Math.PI / 2);
+                return mesh;
+            }
+
+            buildFieldLines() {
+                // Creates beautiful glowing flow lines indicating field vectors
+                const lineCount = 5;
+                const fieldLineMat = new THREE.LineDashedMaterial({
+                    color: THEME.accent1,
+                    dashSize: 0.15,
+                    gapSize: 0.1,
+                });
+
+                const spacingY = 0.7;
+                const spacingZ = 0.9;
+
+                const positions = [
+                    new THREE.Vector3(0, 0.8, 0),
+                    new THREE.Vector3(0, -0.8, 0),
+                    new THREE.Vector3(0, 0.4, 1.2),
+                    new THREE.Vector3(0, -0.4, 1.2),
+                    new THREE.Vector3(0, 0.4, -1.2),
+                    new THREE.Vector3(0, -0.4, -1.2)
+                ];
+
+                positions.forEach((pos) => {
+                    // Create Arrow Helpers to explicitly indicate direction N -> S (+x)
+                    const arrow = new THREE.ArrowHelper(
+                        new THREE.Vector3(1, 0, 0),
+                        new THREE.Vector3(-2.3, pos.y, pos.z),
+                        4.6,
+                        THEME.accent1,
+                        0.25,
+                        0.14
+                    );
+                    this.staticGroup.add(arrow);
+                    this.fieldArrows.push(arrow);
+                });
+            }
+
+            buildForceArrows() {
+                // Instantiates green vectors for visual representation of Lorentz Forces (F)
+                // Left hand wire side (generally upwards force)
+                this.leftForceArrow = new THREE.ArrowHelper(
+                    new THREE.Vector3(0, 1, 0),
+                    new THREE.Vector3(-1.3, 0, 0),
+                    1.4,
+                    THEME.accent3,
+                    0.3,
+                    0.16
+                );
+                this.scene.add(this.leftForceArrow);
+
+                // Right hand wire side (generally downwards force)
+                this.rightForceArrow = new THREE.ArrowHelper(
+                    new THREE.Vector3(0, -1, 0),
+                    new THREE.Vector3(1.3, 0, 0),
+                    1.4,
+                    THEME.accent3,
+                    0.3,
+                    0.16
+                );
+                this.scene.add(this.rightForceArrow);
+            }
+
+            buildCurrentParticles() {
+                // Generates glowing spheres traveling along rotor path
+                this.particleGroup = new THREE.Group();
+                this.rotorGroup.add(this.particleGroup);
+
+                // Precompute total length and incremental steps along coil path
+                this.segmentLengths = [];
+                this.totalPathLength = 0;
+                for (let i = 0; i < this.coilPath.length - 1; i++) {
+                    const len = this.coilPath[i].distanceTo(this.coilPath[i+1]);
+                    this.segmentLengths.push(len);
+                    this.totalPathLength += len;
+                }
+
+                const particleCount = 12;
+                const particleMat = new THREE.MeshBasicMaterial({ color: THEME.hover });
+                const particleGeo = new THREE.SphereGeometry(0.065, 8, 8);
+
+                for (let i = 0; i < particleCount; i++) {
+                    const sphere = new THREE.Mesh(particleGeo, particleMat);
+                    this.particleGroup.add(sphere);
+                    this.currentParticles.push(sphere);
+                }
+            }
+
+            // Interpolates positions sequentially along wire segments
+            getPointOnCoil(progress) {
+                progress = progress % 1.0;
+                if (progress < 0) progress += 1.0;
+
+                const targetDist = progress * this.totalPathLength;
+                let currentDist = 0;
+
+                for (let i = 0; i < this.segmentLengths.length; i++) {
+                    if (currentDist + this.segmentLengths[i] >= targetDist) {
+                        const localT = (targetDist - currentDist) / this.segmentLengths[i];
+                        return new THREE.Vector3().lerpVectors(this.coilPath[i], this.coilPath[i+1], localT);
+                    }
+                    currentDist += this.segmentLengths[i];
+                }
+                return this.coilPath[this.coilPath.length - 1].clone();
+            }
+
+            resize() {
+                const w = this.container.clientWidth;
+                const h = this.container.clientHeight;
+                this.renderer.setSize(w, h, false);
+                this.camera.aspect = w / h;
+                this.camera.updateProjectionMatrix();
+            }
+
+            animate() {
+                requestAnimationFrame(this.animate);
+
+                // Handle continuous rotation versus interactive step transitions
+                if (motorState.isRunning) {
+                    motorState.angle += motorState.speed * 0.016;
+                } else {
+                    // Smoothly ease current position to the target step position
+                    motorState.angle += (motorState.targetAngle - motorState.angle) * 0.08;
+                }
+
+                // Bound angle space
+                let currentRot = motorState.angle % (Math.PI * 2);
+                if (currentRot < 0) currentRot += Math.PI * 2;
+
+                // Rotate Rotor group
+                this.rotorGroup.rotation.z = motorState.angle;
+
+                // Physics commutation math
+                let flowActive = motorState.showCurrent;
+                let forceActive = motorState.showForce;
+                let flowDirection = 1;
+
+                // Insulating gap checks: Gaps sit vertical (90 and 270 deg)
+                const commutatorGap = 0.14; // gap width in rads
+                const modAngle = currentRot % Math.PI;
+
+                if (Math.abs(modAngle - Math.PI / 2) < commutatorGap) {
+                    // Contact broken on split rings
+                    flowActive = false;
+                    forceActive = false;
+                    flowDirection = 0;
+                } else if (currentRot > Math.PI / 2 && currentRot < Math.PI * 1.5) {
+                    // Commutation swaps polarity of loops relative to source
+                    flowDirection = -1;
+                } else {
+                    flowDirection = 1;
+                }
+
+                // Global display overrides from dashboard states
+                if (!motorState.showCurrent) flowActive = false;
+                if (!motorState.showForce) forceActive = false;
+
+                // Show/hide horizontal flux vectors
+                this.fieldArrows.forEach((arrow) => {
+                    arrow.visible = motorState.showField;
+                });
+
+                // Compute particle flowing positions
+                if (flowActive) {
+                    this.particleGroup.visible = true;
+                    // Integrate distance progression
+                    particlesProgress += motorState.particleSpeed * flowDirection;
+                    this.currentParticles.forEach((particle, idx) => {
+                        const progress = (particlesProgress + (idx / this.currentParticles.length)) % 1.0;
+                        const localPosition = this.getPointOnCoil(progress);
+                        particle.position.copy(localPosition);
+                    });
+                } else {
+                    this.particleGroup.visible = false;
+                }
+
+                // Orient and scale Force Vectors dynamically
+                if (forceActive) {
+                    this.leftForceArrow.visible = true;
+                    this.rightForceArrow.visible = true;
+
+                    // Project rotor wire coordinates to global space
+                    const leftWireLocal = new THREE.Vector3(-1.3, 0, 0);
+                    const rightWireLocal = new THREE.Vector3(1.3, 0, 0);
+
+                    const leftWireWorld = leftWireLocal.applyMatrix4(this.rotorGroup.matrixWorld);
+                    const rightWireWorld = rightWireLocal.applyMatrix4(this.rotorGroup.matrixWorld);
+
+                    this.leftForceArrow.position.copy(leftWireWorld);
+                    this.rightForceArrow.position.copy(rightWireWorld);
+
+                    // Force vectors must physically maintain uniform direction relative to field/polarity
+                    // Left wire in world view feels vertical force dependent on which side of field it lies
+                    if (leftWireWorld.x < 0) {
+                        this.leftForceArrow.setDirection(new THREE.Vector3(0, 1, 0));
+                        this.rightForceArrow.setDirection(new THREE.Vector3(0, -1, 0));
+                    } else {
+                        this.leftForceArrow.setDirection(new THREE.Vector3(0, -1, 0));
+                        this.rightForceArrow.setDirection(new THREE.Vector3(0, 1, 0));
+                    }
+
+                    // Dynamically scale force representations as torque diminishes near vertical
+                    const torqueProjection = Math.abs(Math.cos(currentRot));
+                    const arrowScale = Math.max(0.2, torqueProjection) * 1.3;
+                    this.leftForceArrow.setLength(arrowScale, 0.25, 0.14);
+                    this.rightForceArrow.setLength(arrowScale, 0.25, 0.14);
+
+                } else {
+                    this.leftForceArrow.visible = false;
+                    this.rightForceArrow.visible = false;
+                }
+
+                this.controls.update();
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+
+        /* ==========================================
+           WINDOW INITIALIZATION AND INTERACTION TRIGGERS
+           ========================================== */
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Build visualizer
+            const visualizer = new MotorVisualizer('canvas-container');
+            window.motorVisualizer = visualizer;
+
+            // Load mathematics
+            initMath();
+            initLocalEquationControls();
+            buildProgressDots();
+
+            // Set up drag divider logic
+            const stage = document.getElementById('stage');
+            const divider = document.getElementById('divider');
+            let isDragging = false;
+
+            divider.addEventListener('pointerdown', (e) => {
+                divider.setPointerCapture(e.pointerId);
+                divider.classList.add('dragging');
+                document.body.style.userSelect = 'none';
+                document.body.style.cursor = 'col-resize';
+                isDragging = true;
+            });
+
+            divider.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                const rect = stage.getBoundingClientRect();
+                let pct = ((e.clientX - rect.left) / rect.width) * 100;
+                pct = Math.max(30, Math.min(80, pct)); // bound sizing
+                stage.style.setProperty('--visual-w', `${pct}%`);
+                visualizer.resize();
+            });
+
+            divider.addEventListener('pointerup', (e) => {
+                if (!isDragging) return;
+                divider.releasePointerCapture(e.pointerId);
+                divider.classList.remove('dragging');
+                document.body.style.userSelect = '';
+                document.body.style.cursor = '';
+                isDragging = false;
+                visualizer.resize();
+            });
+
+            window.addEventListener('resize', () => {
+                visualizer.resize();
+            });
+
+            // Sandbox Panel Interactivity
+            const playPauseBtn = document.getElementById('play-pause-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const speedSlider = document.getElementById('speed-slider');
+            const speedVal = document.getElementById('speed-val');
+            
+            const fieldChk = document.getElementById('toggle-field');
+            const currentChk = document.getElementById('toggle-current');
+            const forcesChk = document.getElementById('toggle-forces');
+
+            playPauseBtn.addEventListener('click', () => {
+                if (playPauseBtn.innerText === "Pause") {
+                    playPauseBtn.innerText = "Play";
+                    playPauseBtn.style.backgroundColor = 'var(--accent3)';
+                    motorState.isRunning = false;
+                } else {
+                    playPauseBtn.innerText = "Pause";
+                    playPauseBtn.style.backgroundColor = 'var(--accent1)';
+                    motorState.isRunning = true;
+                }
+            });
+
+            resetBtn.addEventListener('click', () => {
+                motorState.angle = 0;
+                motorState.speed = 1.0;
+                speedSlider.value = 1.0;
+                speedVal.textContent = "1.0x";
+                playPauseBtn.innerText = "Pause";
+                playPauseBtn.style.backgroundColor = 'var(--accent1)';
+                motorState.isRunning = true;
+                fieldChk.checked = true;
+                currentChk.checked = true;
+                forcesChk.checked = true;
+                
+                motorState.showField = true;
+                motorState.showCurrent = true;
+                motorState.showForce = true;
+            });
+
+            speedSlider.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                motorState.speed = val;
+                speedVal.textContent = `${val.toFixed(1)}x`;
+            });
+
+            fieldChk.addEventListener('change', (e) => { motorState.showField = e.target.checked; });
+            currentChk.addEventListener('change', (e) => { motorState.showCurrent = e.target.checked; });
+            forcesChk.addEventListener('change', (e) => { motorState.showForce = e.target.checked; });
+
+            // Apply default initial steps setup
+            applySceneStateForStep(0);
+        });
+    </script>
+</body>
+</html>

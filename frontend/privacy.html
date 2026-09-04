@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', {
+    'analytics_storage': 'denied',
+    'ad_storage': 'denied'
+  });
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Privacy Notice — QuantaCanvas</title>
+<meta name="description" content="What QuantaCanvas collects, why, and for how long — prompts, anonymous usage data, and temporary abuse-prevention logging." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Privacy Notice — QuantaCanvas" />
+<meta property="og:description" content="What QuantaCanvas collects, why, and for how long." />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="canonical" href="https://YOUR-DOMAIN.com/privacy" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="css/styles.css" />
+<link rel="icon" href="/assets/favicon.ico" type="image/x-icon" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Asimovian&display=swap" rel="stylesheet" />
+
+<script>
+  if (localStorage.getItem("qc-theme") === "light") {
+    document.documentElement.classList.add("light");
+  }
+</script>
+</head>
+
+<body>
+
+<header class="site-header">
+  <nav class="nav">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">
+        <img src="assets/logo.png" alt="QuantaCanvas">
+      </span>
+      <span
+        class="brand-word"
+        style="font-family:'Asimovian',sans-serif;font-size:24px;font-weight:700;"
+      >
+        Quanta<span class="c">Canvas</span>
+      </span>
+    </a>
+
+    <div class="nav-menu" id="navMenu">
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="examples.html">Examples</a></li>
+        <li><a href="contact.html">Contact</a></li>
+      </ul>
+
+      <button
+        class="more-btn"
+        id="moreBtn"
+        aria-label="More menu"
+        aria-expanded="false"
+        type="button"
+      >
+        ⋯
+      </button>
+
+      <ul class="more-menu" id="moreMenu"></ul>
+    </div>
+
+    <div class="nav-right">
+      <span class="gen-counter" id="genCounter" title="Daily generations remaining"></span>
+      <button class="icon-btn" data-theme-toggle type="button">☀</button>
+      <a class="btn" href="tool.html">Try it</a>
+    </div>
+  </nav>
+</header>
+
+<main
+  class="wrap-sm"
+  style="
+    width:90%;
+    max-width:900px;
+    padding-top:80px;
+    padding-bottom:80px;
+  "
+>
+
+  <p
+    class="mono accent"
+    style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;"
+  >
+    Privacy
+  </p>
+
+  <h1
+    style="
+      margin-top:16px;
+      font-size:clamp(28px,4.2vw,40px);
+      font-weight:600;
+    "
+  >
+    What we collect, and why
+  </h1>
+
+  <p class="muted" style="margin-top:14px;font-size:14px;">
+    <b>Last updated: August 23, 2026</b>
+  </p>
+  <p class="muted" style="margin-top:14px;font-size:14px;">
+    This notice describes what QuantaCanvas currently collects and why. It will be updated if the way the product handles data changes.
+  </p>
+
+  <div class="prose">
+
+    <h3 style="margin-top:40px;font-size:20px;">Prompts you submit</h3>
+    <p style="margin-bottom: 9px;">
+      When you enter a prompt, we send it to Google's Gemini API to generate your 
+      visualization. We also store the prompt text associated with the generation 
+      so we can understand how the tool is being used and improve QuantaCanvas.
+    </p>
+    <p style="margin-top: 9px;">
+      Please do not include passwords, contact information, or other personal or 
+      sensitive information in your prompts. Treat the prompt box like a public 
+      search box.
+    </p>
+
+    <h3 style="margin-top:32px;font-size:20px;">An anonymous identifier</h3>
+    <p style="margin-bottom: 9px;">
+      When you first use the tool, your browser generates a random identifier. 
+      This identifier is used to apply usage limits.
+    </p>
+    <p style="margin-top: 9px;">
+      It is not intended to identify you by name, email address, or other personal information.
+    </p>
+
+    <h3 style="margin-top:32px;font-size:20px;">IP address</h3>
+    <p style="margin-bottom: 9px;">
+      We temporarily log the IP address associated with requests to detect and prevent automated abuse. IP addresses are automatically deleted after 3 days and are not used for tracking, profiling, or advertising.
+    </p>
+
+
+    <h3 style="margin-top:32px;font-size:20px;">Analytics</h3>
+    <p style="margin-bottom: 9px;">
+      QuantaCanvas uses Vercel Analytics and Speed Insights to understand general website usage and performance. These services are designed to provide aggregated information about things such as page usage and site performance.
+    </p>
+    <p style="margin-top: 9px;">
+      QuantaCanvas may also use Google Analytics to understand how the website is used. Google Analytics may use cookies or similar technologies. Where required, analytics collection is subject to your consent preferences.
+    </p>
+
+    <h3 style="margin-top:32px;font-size:20px;">Who else sees this data</h3>
+    <p>
+      QuantaCanvas uses third-party services to operate the product:
+    </p>
+      <ul>
+        <li><b>Google Gemini API</b> processes prompts submitted to the visualization tool.</li>
+        <li><b>Supabase</b> stores application data associated with generations, including submitted prompts and usage information.</li>
+        <li><b>Vercel</b> hosts the website and provides Vercel Analytics and Speed Insights.</li>
+        <li><b>Google Analytics</b> may process website usage information when analytics is enabled and permitted.</li>
+      </ul>
+
+    <p>
+    We do not sell your personal information or use your information for advertising.
+    </p>
+
+    <h3 style="margin-top:32px;font-size:20px;">Your options</h3>
+    <p>
+      You can use QuantaCanvas without creating an account or providing your name or email address.
+
+      Because QuantaCanvas uses anonymous identifiers rather than accounts, we may not always be able 
+      to identify data associated with a particular person. If you believe you have submitted personal 
+      or sensitive information through the tool, you can contact us and provide any relevant details 
+      that may help us locate it. We will review the request and take appropriate action where possible.
+    </p>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p>
+      QuantaCanvas
+    </p>
+
+    <div class="footer-links">
+      <a href="about.html">About</a>
+      <a href="examples.html">Examples</a>
+      <a href="tool.html">Tool</a>
+      <a href="contact.html">Contact</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>

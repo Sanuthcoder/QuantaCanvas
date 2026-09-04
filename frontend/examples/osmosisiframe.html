@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizing Osmosis</title>
+    
+    <!-- GSAP for animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <!-- p5.js for particle simulations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    
+    <!-- KaTeX for beautiful math equations -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        /* Catppuccin Mocha Theme Variables */
+        :root {
+            --bg: #1e1e2e;
+            --panel: #313244;
+            --text: #cdd6f4;
+            --muted: #6c7086;
+            --grid: #45475a;
+            --axis: #bac2de;
+            --accent1: #89b4fa; /* Water / Solvent (Blue) */
+            --accent2: #f5c2e7; /* Solute (Pink) */
+            --accent3: #a6e3a1; /* Success / Highlight (Green) */
+            --hover: #f9e2af;   /* Warning / Accent (Yellow) */
+            --visual-w: 55%;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* App Container Layout */
+        #app {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        header {
+            flex: 0 0 auto;
+            background-color: var(--panel);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--grid);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent1);
+        }
+
+        .step-indicator {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--grid);
+            transition: background-color 0.3s ease;
+        }
+
+        .dot.active {
+            background-color: var(--accent1);
+        }
+
+        /* Stage Area containing active step */
+        #stage {
+            flex: 1 1 0;
+            min-height: 0;
+            min-width: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .step-container {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+            overflow: hidden;
+        }
+
+        .step-container.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        /* Split Layout Design */
+        .split-layout {
+            display: grid;
+            grid-template-columns: var(--visual-w) 6px minmax(0, 1fr);
+            grid-template-rows: minmax(0, 1fr);
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Visual Pane (Left) */
+        .visual-pane {
+            position: relative;
+            min-width: 0;
+            min-height: 0;
+            height: 100%;
+            overflow: hidden;
+            background-color: #11111b; /* Pitch dark backing for visual contrast */
+        }
+
+        .canvas-host {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Divider */
+        .divider {
+            grid-column: 2;
+            height: 100%;
+            background-color: var(--grid);
+            cursor: col-resize;
+            position: relative;
+            transition: background-color 0.2s ease;
+        }
+
+        .divider:hover, .divider.dragging {
+            background-color: var(--hover);
+        }
+
+        .divider::after {
+            content: '';
+            position: absolute;
+            left: 2px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: var(--accent1);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .divider:hover::after, .divider.dragging::after {
+            opacity: 1;
+        }
+
+        /* Content Pane (Right) */
+        .content-pane {
+            grid-column: 3;
+            min-width: 0;
+            min-height: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2.5rem;
+            background-color: var(--bg);
+            overflow-y: auto;
+        }
+
+        .pane-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .pane-body h2 {
+            font-size: 1.8rem;
+            color: var(--accent1);
+            margin-bottom: 0.5rem;
+        }
+
+        .pane-body p {
+            font-size: 1.05rem;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        .highlight-accent1 { color: var(--accent1); font-weight: bold; }
+        .highlight-accent2 { color: var(--accent2); font-weight: bold; }
+        .highlight-accent3 { color: var(--accent3); font-weight: bold; }
+
+        /* Equation Box styles */
+        .eq-wrap {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 1rem;
+            background-color: var(--panel);
+            border-radius: 8px;
+            border: 1px solid var(--grid);
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent1) transparent;
+            margin: 1rem 0;
+        }
+
+        .eq-state {
+            display: inline-block;
+            white-space: nowrap;
+            min-width: max-content;
+            font-size: clamp(1rem, 1.8vw, 1.6rem);
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Interactive controllers (Sliders, Buttons) */
+        .interactive-controls {
+            background-color: var(--panel);
+            border: 1px solid var(--grid);
+            border-radius: 8px;
+            padding: 1.2rem;
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: var(--axis);
+        }
+
+        /* Slider Styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--grid);
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent1);
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: var(--hover);
+        }
+
+        /* Navigation Footer */
+        footer {
+            flex: 0 0 auto;
+            background-color: var(--panel);
+            padding: 1rem 2rem;
+            border-top: 1px solid var(--grid);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            background-color: var(--grid);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: var(--accent1);
+            color: var(--bg);
+        }
+
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background-color: var(--accent1);
+            color: var(--bg);
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--hover);
+        }
+
+        .local-nav {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-top: 0.5rem;
+        }
+
+        /* Tooltip Legend inside canvas space */
+        .canvas-legend {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background-color: rgba(30, 30, 46, 0.85);
+            border: 1px solid var(--grid);
+            border-radius: 6px;
+            padding: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-color.water { background-color: var(--accent1); }
+        .legend-color.solute { background-color: var(--accent2); }
+        .legend-color.membrane {
+            border-radius: 0;
+            width: 4px;
+            height: 12px;
+            background-color: var(--grid);
+        }
+
+        /* Subtle scrollbar style for content-pane */
+        .content-pane::-webkit-scrollbar {
+            width: 6px;
+        }
+        .content-pane::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .content-pane::-webkit-scrollbar-thumb {
+            background: var(--grid);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <!-- Header -->
+    <header>
+        <h1>Osmosis & Membrane Dynamics</h1>
+        <div class="step-indicator" id="dots-container"></div>
+    </header>
+
+    <!-- Stage containing individual steps -->
+    <main id="stage">
+
+        <!-- STEP 1: The Components of a Solution -->
+        <div class="step-container" id="step-1" data-layout="split">
+            <div class="split-layout">
+                <div class="visual-pane">
+                    <div class="canvas-legend">
+                        <div class="legend-item">
+                            <span class="legend-color water"></span>
+                            <span>Water Molecule (Solvent)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color solute"></span>
+                            <span>Sucrose Molecule (Solute)</span>
+                        </div>
+                    </div>
+                    <div class="canvas-host" id="canvas-s1"></div>
+                </div>
+                <div class="divider" role="separator" aria-orientation="vertical"></div>
+                <div class="content-pane">
+                    <div class="pane-body">
+                        <h2>1. Components of a Solution</h2>
+                        <p>To understand osmosis, we must first look at the ingredients of a solution:</p>
+                        <p>
+                            The <span class="highlight-accent1">Solvent</span> (here, water) is represented by the highly agile, small blue molecules. They are in constant, rapid thermal motion.
+                        </p>
+                        <p>
+                            The <span class="highlight-accent2">Solute</span> (such as sugar or salt) is shown as the larger pink particles. Because they are heavier, they bounce around more slowly.
+                        </p>
+                        <p>
+                            In a free container, random kinetic movement causes both molecules to mix uniformly over time via simple diffusion.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: The Semi-Permeable Membrane -->
+        <div class="step-container" id="step-2" data-layout="split">
+            <div class="split-layout">
+                <div class="visual-pane">
+                    <div class="canvas-legend">
+                        <div class="legend-item"><span class="legend-color water"></span><span>Water (Can pass)</span></div>
+                        <div class="legend-item"><span class="legend-color solute"></span><span>Solute (Blocked)</span></div>
+                        <div class="legend-item"><span class="legend-color membrane"></span><span>Membrane Pores</span></div>
+                    </div>
+                    <div class="canvas-host" id="canvas-s2"></div>
+                </div>
+                <div class="divider" role="separator" aria-orientation="vertical"></div>
+                <div class="content-pane">
+                    <div class="pane-body">
+                        <h2>2. The Selective Barrier</h2>
+                        <p>Now, let's introduce a <span class="highlight-accent3">Semi-Permeable Membrane</span> down the middle.</p>
+                        <p>
+                            This barrier acts as a physical filter. It contains microscopic channels or pores.
+                        </p>
+                        <p>
+                            Observe how the small <span class="highlight-accent1">Water molecules</span> pass back and forth through the pores with ease. 
+                        </p>
+                        <p>
+                            However, the larger <span class="highlight-accent2">Solute particles</span> cannot fit. When they strike the barrier, they bounce right back, remaining locked on their respective sides.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 3: Concentration Gradient & Net Flow -->
+        <div class="step-container" id="step-3" data-layout="split">
+            <div class="split-layout">
+                <div class="visual-pane">
+                    <div class="canvas-legend">
+                        <div class="legend-item"><span class="legend-color water"></span><span>Water (Migrating)</span></div>
+                        <div class="legend-item"><span class="legend-color solute"></span><span>Solute (Immobile)</span></div>
+                    </div>
+                    <div class="canvas-host" id="canvas-s3"></div>
+                </div>
+                <div class="divider" role="separator" aria-orientation="vertical"></div>
+                <div class="content-pane">
+                    <div class="pane-body">
+                        <h2>3. The Force of Osmosis</h2>
+                        <p>What happens when concentration is unequal?</p>
+                        <p>
+                            The Left chamber is filled with <span class="highlight-accent1">Pure Water</span> (Hypotonic), while the Right chamber contains a high concentration of <span class="highlight-accent2">Solute</span> (Hypertonic).
+                        </p>
+                        <p>
+                            Because solute particles block water from reaching the pores as easily on the right, water molecules cross from <strong>Left to Right</strong> far more frequently than the other way around.
+                        </p>
+                        <p>
+                            This dynamic leads to a net migration of water. Notice the physical level on the right rising! This is <strong>Osmosis</strong> in action.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 4: Equilibrium & Osmotic Pressure -->
+        <div class="step-container" id="step-4" data-layout="split">
+            <div class="split-layout">
+                <div class="visual-pane">
+                    <div class="canvas-host" id="canvas-s4"></div>
+                </div>
+                <div class="divider" role="separator" aria-orientation="vertical"></div>
+                <div class="content-pane">
+                    <div class="pane-body">
+                        <h2>4. Osmotic Pressure</h2>
+                        <p>
+                            As water climbs the right chamber, the weight of the water column exerts downward mechanical pressure.
+                        </p>
+                        <p>
+                            The force required to completely halt this net flow of water is known as the <span class="highlight-accent3">Osmotic Pressure ($\Pi$)</span>.
+                        </p>
+
+                        <!-- Equations wrapper -->
+                        <div class="eq-wrap">
+                            <div class="eq-state" id="eq-box"></div>
+                        </div>
+
+                        <div class="local-nav">
+                            <button class="btn" id="btn-prev-eq" onclick="prevEqState()">◀</button>
+                            <span style="font-size: 0.9rem;" id="eq-progress">1 / 3</span>
+                            <button class="btn" id="btn-next-eq" onclick="nextEqState()">▶</button>
+                            <button class="btn" style="margin-left: auto;" onclick="resetEqState()">Replay</button>
+                        </div>
+
+                        <div class="interactive-controls">
+                            <div class="control-group">
+                                <div class="control-label">
+                                    <span>Apply Mechanical Pressure</span>
+                                    <span id="pressure-val">0.0 atm</span>
+                                </div>
+                                <input type="range" id="slider-pressure" min="0" max="100" value="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer Controls -->
+    <footer>
+        <button class="btn" id="btn-prev" onclick="changeStep(-1)">◀ Prev Step</button>
+        <span id="step-number" style="font-weight: 600; color: var(--axis);">Step 1 of 4</span>
+        <button class="btn btn-primary" id="btn-next" onclick="changeStep(1)">Next Step ▶</button>
+    </footer>
+</div>
+
+<script>
+    // Theme colors matching Catppuccin Mocha
+    const THEME = {
+        bg: '#1e1e2e',
+        panel: '#313244',
+        text: '#cdd6f4',
+        muted: '#6c7086',
+        grid: '#45475a',
+        axis: '#bac2de',
+        accent1: '#89b4fa', // Solvent
+        accent2: '#f5c2e7', // Solute
+        accent3: '#a6e3a1', // Osmotic force
+        hover: '#f9e2af'    // Highlights
+    };
+
+    let activeStep = 1;
+    const totalSteps = 4;
+    let currentSketch = null;
+
+    // Equations array for Step 4
+    const equations = [
+        "\\Pi = i \\cdot M \\cdot R \\cdot T",
+        "\\Pi = i \\cdot \\textcolor{#f5c2e7}{\\frac{n}{V}} \\cdot R \\cdot T",
+        "\\Pi \\cdot \\textcolor{#89b4fa}{V} = i \\cdot n \\cdot R \\cdot T"
+    ];
+    let activeEqState = 0;
+
+    // Register safe render functions
+    function safeRenderKatex(formula, element) {
+        const cleaned = formula
+            .replace(/^\s*\$\$?|\$\$?\s*$/g, '')
+            .replace(/^\s*\\[\(\[]|\\[\)\]]\s*$/g, '')
+            .trim();
+        const checkExist = setInterval(() => {
+            if (typeof window.katex !== 'undefined') {
+                clearInterval(checkExist);
+                try {
+                    window.katex.render(cleaned, element, { throwOnError: false, displayMode: true });
+                } catch (err) { console.error(err); }
+            }
+        }, 50);
+    }
+
+    function safeAutoRender(rootElement) {
+        const tryRender = setInterval(() => {
+            if (typeof window.renderMathInElement !== 'undefined') {
+                clearInterval(tryRender);
+                window.renderMathInElement(rootElement, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$',  right: '$',  display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError: false,
+                    ignoredTags: ['script','noscript','style','textarea','pre','code','option']
+                });
+            }
+        }, 50);
+    }
+
+    // Initialize layout and indicators
+    function initApp() {
+        const dotsContainer = document.getElementById('dots-container');
+        for (let i = 1; i <= totalSteps; i++) {
+            const dot = document.createElement('div');
+            dot.className = `dot ${i === 1 ? 'active' : ''}`;
+            dot.id = `dot-${i}`;
+            dotsContainer.appendChild(dot);
+        }
+        setupSplitDivider();
+        activateStep(1);
+    }
+
+    // Set up sliding split pane divider logic
+    function setupSplitDivider() {
+        document.querySelectorAll('.split-layout').forEach(layout => {
+            const divider = layout.querySelector('.divider');
+            const step = layout.closest('.step-container');
+
+            let isDragging = false;
+
+            divider.addEventListener('pointerdown', (e) => {
+                isDragging = true;
+                divider.classList.add('dragging');
+                document.body.style.userSelect = 'none';
+                document.body.style.cursor = 'col-resize';
+                divider.setPointerCapture(e.pointerId);
+            });
+
+            divider.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                const stageRect = document.getElementById('stage').getBoundingClientRect();
+                let pct = ((e.clientX - stageRect.left) / stageRect.width) * 100;
+                pct = Math.max(30, Math.min(80, pct)); // Clamp ratio
+                document.documentElement.style.setProperty('--visual-w', `${pct}%`);
+                
+                // Trigger dynamic visualization resize live
+                if (currentSketch && typeof currentSketch.customResize === 'function') {
+                    currentSketch.customResize();
+                }
+            });
+
+            const stopDrag = () => {
+                if (isDragging) {
+                    isDragging = false;
+                    divider.classList.remove('dragging');
+                    document.body.style.userSelect = '';
+                    document.body.style.cursor = '';
+                    if (currentSketch && typeof currentSketch.customResize === 'function') {
+                        currentSketch.customResize();
+                    }
+                }
+            };
+
+            divider.addEventListener('pointerup', stopDrag);
+            divider.addEventListener('pointercancel', stopDrag);
+        });
+
+        window.addEventListener('resize', () => {
+            if (currentSketch && typeof currentSketch.customResize === 'function') {
+                currentSketch.customResize();
+            }
+        });
+    }
+
+    // Step Activator and Manager
+    function activateStep(stepNum) {
+        // Teardown previous visualization
+        if (currentSketch) {
+            currentSketch.remove();
+            currentSketch = null;
+        }
+
+        // Deactivate old step DOM elements
+        document.querySelectorAll('.step-container').forEach(step => {
+            step.classList.remove('active');
+        });
+
+        activeStep = stepNum;
+
+        // Activate matching step DOM
+        const activeContainer = document.getElementById(`step-${stepNum}`);
+        activeContainer.classList.add('active');
+
+        // Update indicators
+        document.querySelectorAll('.dot').forEach((dot, index) => {
+            dot.classList.toggle('active', index + 1 === stepNum);
+        });
+        document.getElementById('step-number').innerText = `Step ${stepNum} of ${totalSteps}`;
+        document.getElementById('btn-prev').disabled = stepNum === 1;
+        document.getElementById('btn-next').innerText = stepNum === totalSteps ? 'Finish' : 'Next Step ▶';
+
+        // Bootstrapping individual sketches based on steps
+        setTimeout(() => {
+            initStepSketch(stepNum);
+            safeAutoRender(activeContainer);
+        }, 50);
+    }
+
+    function changeStep(dir) {
+        let next = activeStep + dir;
+        if (next >= 1 && next <= totalSteps) {
+            activateStep(next);
+        }
+    }
+
+    // Equation visual steps logic
+    function renderCurrentEq() {
+        const box = document.getElementById('eq-box');
+        if (box) {
+            safeRenderKatex(equations[activeEqState], box);
+            document.getElementById('eq-progress').innerText = `${activeEqState + 1} / ${equations.length}`;
+            
+            // GSAP pulse transition on state switch
+            gsap.fromTo(box, { opacity: 0.4, scale: 0.98 }, { opacity: 1, scale: 1, duration: 0.3, ease: 'power1.out' });
+        }
+    }
+
+    function nextEqState() {
+        if (activeEqState < equations.length - 1) {
+            activeEqState++;
+            renderCurrentEq();
+        }
+    }
+
+    function prevEqState() {
+        if (activeEqState > 0) {
+            activeEqState--;
+            renderCurrentEq();
+        }
+    }
+
+    function resetEqState() {
+        activeEqState = 0;
+        renderCurrentEq();
+    }
+
+
+    /* =========================================================================
+       SKETCHES SIMULATION LOGIC (p5.js Instance Mode)
+       ========================================================================= */
+
+    function initStepSketch(stepNum) {
+        if (stepNum === 1) {
+            const host = document.getElementById('canvas-s1');
+            currentSketch = new p5(sketch1, host);
+        } else if (stepNum === 2) {
+            const host = document.getElementById('canvas-s2');
+            currentSketch = new p5(sketch2, host);
+        } else if (stepNum === 3) {
+            const host = document.getElementById('canvas-s3');
+            currentSketch = new p5(sketch3, host);
+        } else if (stepNum === 4) {
+            const host = document.getElementById('canvas-s4');
+            currentSketch = new p5(sketch4, host);
+            resetEqState();
+        }
+    }
+
+    // Helper: Elastic particle object generator
+    function createParticle(p, x, y, r, type, boundary) {
+        return {
+            x: x,
+            y: y,
+            vx: p.random(-2, 2) || 1,
+            vy: p.random(-2, 2) || 1,
+            radius: r,
+            type: type, // 'water' or 'solute'
+            update: function(leftX, rightX, topY, bottomY) {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Wall collisions inside dynamic boundaries
+                if (this.x - this.radius < leftX) {
+                    this.x = leftX + this.radius;
+                    this.vx *= -1;
+                }
+                if (this.x + this.radius > rightX) {
+                    this.x = rightX - this.radius;
+                    this.vx *= -1;
+                }
+                if (this.y - this.radius < topY) {
+                    this.y = topY + this.radius;
+                    this.vy *= -1;
+                }
+                if (this.y + this.radius > bottomY) {
+                    this.y = bottomY - this.radius;
+                    this.vy *= -1;
+                }
+            },
+            draw: function() {
+                p.noStroke();
+                if (this.type === 'water') {
+                    p.fill(137, 180, 250); // Accent 1
+                } else {
+                    p.fill(245, 194, 231); // Accent 2
+                }
+                p.ellipse(this.x, this.y, this.radius * 2);
+            }
+        };
+    }
+
+    // SKETCH 1: Free Diffusion
+    function sketch1(p) {
+        let particles = [];
+        let hostEl = document.getElementById('canvas-s1');
+
+        p.setup = function() {
+            let canvas = p.createCanvas(hostEl.clientWidth, hostEl.clientHeight);
+            canvas.parent(hostEl);
+            p.initializeParticles();
+        };
+
+        p.initializeParticles = function() {
+            particles = [];
+            // Spawn 40 small rapid water particles
+            for (let i = 0; i < 45; i++) {
+                particles.push(createParticle(p, p.random(20, p.width - 20), p.random(20, p.height - 20), 5, 'water'));
+            }
+            // Spawn 8 large slow solute particles
+            for (let i = 0; i < 8; i++) {
+                let part = createParticle(p, p.random(30, p.width - 30), p.random(30, p.height - 30), 15, 'solute');
+                part.vx *= 0.5;
+                part.vy *= 0.5;
+                particles.push(part);
+            }
+        };
+
+        p.draw = function() {
+            p.background(17, 17, 27); // Darkest background
+            
+            // Outer Chamber line
+            p.stroke(69, 71, 90);
+            p.strokeWeight(3);
+            p.noFill();
+            p.rect(10, 10, p.width - 20, p.height - 20, 8);
+
+            for (let part of particles) {
+                part.update(10, p.width - 10, 10, p.height - 10);
+                part.draw();
+            }
+        };
+
+        p.customResize = function() {
+            if (hostEl) {
+                p.resizeCanvas(hostEl.clientWidth, hostEl.clientHeight);
+                p.initializeParticles();
+            }
+        };
+    }
+
+    // SKETCH 2: Semi-Permeable Membrane introduction
+    function sketch2(p) {
+        let particles = [];
+        let hostEl = document.getElementById('canvas-s2');
+
+        p.setup = function() {
+            let canvas = p.createCanvas(hostEl.clientWidth, hostEl.clientHeight);
+            canvas.parent(hostEl);
+            p.initializeParticles();
+        };
+
+        p.initializeParticles = function() {
+            particles = [];
+            let midX = p.width / 2;
+
+            // Spawn water molecules anywhere
+            for (let i = 0; i < 45; i++) {
+                particles.push(createParticle(p, p.random(20, p.width - 20), p.random(20, p.height - 20), 5, 'water'));
+            }
+
+            // Spawn Solutes on both sides, bound strictly by their halves
+            for (let i = 0; i < 4; i++) {
+                let leftSolute = createParticle(p, p.random(30, midX - 30), p.random(30, p.height - 30), 15, 'solute');
+                leftSolute.vx *= 0.4; leftSolute.vy *= 0.4;
+                particles.push(leftSolute);
+
+                let rightSolute = createParticle(p, p.random(midX + 30, p.width - 30), p.random(30, p.height - 30), 15, 'solute');
+                rightSolute.vx *= 0.4; rightSolute.vy *= 0.4;
+                particles.push(rightSolute);
+            }
+        };
+
+        p.draw = function() {
+            p.background(17, 17, 27);
+            let midX = p.width / 2;
+
+            // Run particles
+            for (let part of particles) {
+                if (part.type === 'water') {
+                    // Water crosses membrane freely
+                    part.update(10, p.width - 10, 10, p.height - 10);
+                } else {
+                    // Solutes are physically restricted to left or right compartments
+                    if (part.x < midX) {
+                        part.update(10, midX - 5, 10, p.height - 10);
+                    } else {
+                        part.update(midX + 5, p.width - 10, 10, p.height - 10);
+                    }
+                }
+                part.draw();
+            }
+
+            // Draw Membrane barrier down middle
+            p.stroke(91, 96, 120);
+            p.strokeWeight(4);
+            // Dotted pattern showing pores
+            for (let y = 15; y < p.height - 15; y += 15) {
+                p.line(midX, y, midX, y + 6);
+            }
+
+            // Outer chamber
+            p.noFill();
+            p.stroke(69, 71, 90);
+            p.strokeWeight(3);
+            p.rect(10, 10, p.width - 20, p.height - 20, 8);
+        };
+
+        p.customResize = function() {
+            if (hostEl) {
+                p.resizeCanvas(hostEl.clientWidth, hostEl.clientHeight);
+                p.initializeParticles();
+            }
+        };
+    }
+
+    // SKETCH 3: Unequal levels & Osmotic migration
+    function sketch3(p) {
+        let particles = [];
+        let hostEl = document.getElementById('canvas-s3');
+        let leftHeight, rightHeight;
+        let midX;
+
+        p.setup = function() {
+            let canvas = p.createCanvas(hostEl.clientWidth, hostEl.clientHeight);
+            canvas.parent(hostEl);
+            p.resetState();
+        };
+
+        p.resetState = function() {
+            particles = [];
+            midX = p.width / 2;
+            
+            // Set starting liquid heights equally
+            leftHeight = p.height * 0.55;
+            rightHeight = p.height * 0.55;
+
+            // Spawn Water molecules biased heavily to LHS (Pure Water vs hypertonic solution)
+            for (let i = 0; i < 50; i++) {
+                particles.push(createParticle(p, p.random(25, midX - 25), p.random(p.height - leftHeight + 15, p.height - 20), 5, 'water'));
+            }
+            for (let i = 0; i < 15; i++) {
+                particles.push(createParticle(p, p.random(midX + 25, p.width - 25), p.random(p.height - rightHeight + 15, p.height - 20), 5, 'water'));
+            }
+
+            // Spawn Solutes ONLY on RHS (Hypertonic side)
+            for (let i = 0; i < 12; i++) {
+                let solute = createParticle(p, p.random(midX + 30, p.width - 30), p.random(p.height - rightHeight + 30, p.height - 30), 14, 'solute');
+                solute.vx *= 0.4; solute.vy *= 0.4;
+                particles.push(solute);
+            }
+        };
+
+        p.draw = function() {
+            p.background(17, 17, 27);
+            midX = p.width / 2;
+
+            // Dynamic shift: Transfer liquid heights based on actual water particle balance
+            let waterOnLeft = 0;
+            let waterOnRight = 0;
+            for (let part of particles) {
+                if (part.type === 'water') {
+                    if (part.x < midX) waterOnLeft++;
+                    else waterOnRight++;
+                }
+            }
+
+            // Map particle count to visual liquid heights
+            let targetLeftHeight = p.map(waterOnLeft, 10, 55, p.height * 0.35, p.height * 0.75, true);
+            let targetRightHeight = p.map(waterOnRight, 10, 55, p.height * 0.35, p.height * 0.75, true);
+
+            // Smooth height transition using simple dampening
+            leftHeight = p.lerp(leftHeight, targetLeftHeight, 0.05);
+            rightHeight = p.lerp(rightHeight, targetRightHeight, 0.05);
+
+            // Draw fluid backgrounds representing bulk solution volume
+            p.noStroke();
+            p.fill(30, 41, 59, 150); // Soft ocean blue/grey fluid
+            p.rect(10, p.height - leftHeight, midX - 10, leftHeight - 10);
+            p.rect(midX, p.height - rightHeight, p.width - midX - 10, rightHeight - 10);
+
+            // Fluid level highlight bars
+            p.stroke(137, 180, 250, 180);
+            p.strokeWeight(2);
+            p.line(10, p.height - leftHeight, midX, p.height - leftHeight);
+            p.line(midX, p.height - rightHeight, p.width - 10, p.height - rightHeight);
+
+            // Update and draw particles within their respective liquid boundaries
+            for (let part of particles) {
+                if (part.type === 'water') {
+                    // Check which compartment the water is currently in and use appropriate boundaries
+                    if (part.x < midX) {
+                        part.update(15, p.width - 15, p.height - leftHeight + 5, p.height - 15);
+                    } else {
+                        part.update(15, p.width - 15, p.height - rightHeight + 5, p.height - 15);
+                    }
+                    
+                    // Handle transition scaling if water crosses compartment boundary to prevent "jumping out of fluid"
+                    if (part.x < midX && part.y < p.height - leftHeight) {
+                        part.y = p.height - leftHeight + part.radius;
+                        part.vy *= -1;
+                    } else if (part.x >= midX && part.y < p.height - rightHeight) {
+                        part.y = p.height - rightHeight + part.radius;
+                        part.vy *= -1;
+                    }
+                } else {
+                    // Solute is locked in RHS
+                    part.update(midX + 15, p.width - 15, p.height - rightHeight + 15, p.height - 15);
+                }
+                part.draw();
+            }
+
+            // Semi-Permeable Membrane (Stops solutes only)
+            p.stroke(91, 96, 120);
+            p.strokeWeight(4);
+            let activeMembraneHeight = Math.max(leftHeight, rightHeight);
+            for (let y = p.height - activeMembraneHeight; y < p.height - 10; y += 15) {
+                p.line(midX, y, midX, y + 6);
+            }
+
+            // Chamber outline
+            p.noFill();
+            p.stroke(69, 71, 90);
+            p.strokeWeight(3);
+            p.rect(10, 10, p.width - 20, p.height - 20, 8);
+        };
+
+        p.customResize = function() {
+            if (hostEl) {
+                p.resizeCanvas(hostEl.clientWidth, hostEl.clientHeight);
+                p.resetState();
+            }
+        };
+    }
+
+    // SKETCH 4: Osmotic Pressure Slider & Piston visualizer
+    function sketch4(p) {
+        let particles = [];
+        let hostEl = document.getElementById('canvas-s4');
+        let leftHeight, rightHeight;
+        let midX;
+        let slider;
+
+        p.setup = function() {
+            let canvas = p.createCanvas(hostEl.clientWidth, hostEl.clientHeight);
+            canvas.parent(hostEl);
+            slider = document.getElementById('slider-pressure');
+            p.resetState();
+        };
+
+        p.resetState = function() {
+            particles = [];
+            midX = p.width / 2;
+
+            // Start in highly unbalanced Osmotic state
+            leftHeight = p.height * 0.40;
+            rightHeight = p.height * 0.70;
+
+            // 15 Left Water, 50 Right Water
+            for (let i = 0; i < 18; i++) {
+                particles.push(createParticle(p, p.random(25, midX - 25), p.random(p.height - leftHeight + 15, p.height - 20), 5, 'water'));
+            }
+            for (let i = 0; i < 47; i++) {
+                particles.push(createParticle(p, p.random(midX + 25, p.width - 25), p.random(p.height - rightHeight + 15, p.height - 20), 5, 'water'));
+            }
+
+            // 12 Solutes locked on Right
+            for (let i = 0; i < 12; i++) {
+                let solute = createParticle(p, p.random(midX + 30, p.width - 30), p.random(p.height - rightHeight + 30, p.height - 30), 14, 'solute');
+                solute.vx *= 0.4; solute.vy *= 0.4;
+                particles.push(solute);
+            }
+        };
+
+        p.draw = function() {
+            p.background(17, 17, 27);
+            midX = p.width / 2;
+
+            // Grab user's applied force from DOM slider
+            let appliedPressure = parseFloat(slider.value) / 100.0;
+            document.getElementById('pressure-val').innerText = `${(appliedPressure * 22.4).toFixed(1)} atm`;
+
+            // Osmotic balance shifts: higher pressure pushes water back to the Left chamber
+            let maxShift = p.height * 0.15;
+            let pistonOffset = appliedPressure * maxShift;
+
+            let targetLeftHeight = (p.height * 0.42) + pistonOffset;
+            let targetRightHeight = (p.height * 0.68) - pistonOffset;
+
+            // Smooth linear interpolation for transitions
+            leftHeight = p.lerp(leftHeight, targetLeftHeight, 0.08);
+            rightHeight = p.lerp(rightHeight, targetRightHeight, 0.08);
+
+            // Water pressure gradient bias forcing water left proportional to pressure slider
+            if (appliedPressure > 0.1) {
+                for (let part of particles) {
+                    if (part.type === 'water' && part.x > midX && p.random() < appliedPressure * 0.05) {
+                        part.vx -= appliedPressure * 0.4; // Push leftward
+                    }
+                }
+            }
+
+            // Draw fluid backgrounds
+            p.noStroke();
+            p.fill(30, 41, 59, 150);
+            p.rect(10, p.height - leftHeight, midX - 10, leftHeight - 10);
+            p.rect(midX, p.height - rightHeight, p.width - midX - 10, rightHeight - 10);
+
+            // Draw Mechanical Pressure Piston (acts as lid on RHS)
+            p.stroke(249, 226, 175); // Yellow accent
+            p.strokeWeight(6);
+            let pistonY = p.height - rightHeight;
+            p.line(midX + 2, pistonY, p.width - 10, pistonY);
+            
+            // Piston cross bars
+            p.strokeWeight(2);
+            p.fill(249, 226, 175, 100);
+            p.rect(midX + 30, pistonY - 15, p.width - midX - 60, 15);
+
+            // Update & Draw particles
+            for (let part of particles) {
+                if (part.type === 'water') {
+                    if (part.x < midX) {
+                        part.update(15, p.width - 15, p.height - leftHeight + 5, p.height - 15);
+                    } else {
+                        part.update(15, p.width - 15, p.height - rightHeight + 5, p.height - 15);
+                    }
+                    
+                    // Boundary scaling
+                    if (part.x < midX && part.y < p.height - leftHeight) {
+                        part.y = p.height - leftHeight + part.radius;
+                        part.vy *= -1;
+                    } else if (part.x >= midX && part.y < p.height - rightHeight) {
+                        part.y = p.height - rightHeight + part.radius;
+                        part.vy *= -1;
+                    }
+                } else {
+                    // Solute behaves as normal locked to RHS
+                    part.update(midX + 15, p.width - 15, p.height - rightHeight + 15, p.height - 15);
+                }
+                part.draw();
+            }
+
+            // Membrane
+            p.stroke(91, 96, 120);
+            p.strokeWeight(4);
+            let activeMembraneHeight = Math.max(leftHeight, rightHeight);
+            for (let y = p.height - activeMembraneHeight; y < p.height - 10; y += 15) {
+                p.line(midX, y, midX, y + 6);
+            }
+
+            // Chamber bounds
+            p.noFill();
+            p.stroke(69, 71, 90);
+            p.strokeWeight(3);
+            p.rect(10, 10, p.width - 20, p.height - 20, 8);
+        };
+
+        p.customResize = function() {
+            if (hostEl) {
+                p.resizeCanvas(hostEl.clientWidth, hostEl.clientHeight);
+                p.resetState();
+            }
+        };
+    }
+
+    // Keyboard navigation binding
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') {
+            if (e.shiftKey) changeStep(1);
+            else if (activeStep === 4) nextEqState();
+            else changeStep(1);
+        } else if (e.key === 'ArrowLeft') {
+            if (e.shiftKey) changeStep(-1);
+            else if (activeStep === 4) prevEqState();
+            else changeStep(-1);
+        }
+    });
+
+    // Boot execution on window load
+    window.onload = initApp;
+</script>
+
+</body>
+</html>
