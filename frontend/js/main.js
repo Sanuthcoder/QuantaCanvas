@@ -81,12 +81,7 @@ const parseJsonResponse = async (response) => {
 
 	const homeView = document.getElementById("toolHomeView");
 	const promptInput = document.getElementById("promptInput");
-	const overlay = document.getElementById("toolOverlay");
-	const loadingMessage = document.getElementById("loadingMessage");
-	const abortButton = document.getElementById("abortGeneration");
 	 const sendPrompt = document.getElementById("sendPrompt");
-	let requestController = null;
-	let loadingMessageTimer = null;
 	let lessonContext = "";
 	let history = [];
 
@@ -187,42 +182,19 @@ const parseJsonResponse = async (response) => {
 		return "";
 	};
 
-	const setLoading = (loading) => {
-		overlay.hidden = !loading;
-		promptInput.disabled = loading;
-		 sendPrompt.disabled = loading || !promptInput.value.trim();
-		 if (loading) {
-			 let dots = 0;
-			 loadingMessage.textContent = "Generating visualization";
-			 loadingMessageTimer = setInterval(() => {
-				dots = (dots + 1) % 4;
-				loadingMessage.textContent = `Generating visualization${".".repeat(dots)}`;
-			 }, 500);
-		 } else {
-			 window.removeEventListener("beforeunload", warnBeforeUnload);
-			 if (loadingMessageTimer) {
-				 clearInterval(loadingMessageTimer);
-				 loadingMessageTimer = null;
-			 }
-		 }
-	};
-
-	
-
 	// Queued flow: /api/generate returns a job id immediately and the responses
 	// page polls until the GitHub Actions worker has written the document.
 	promptForm.addEventListener("submit", async (event) => {
 		event.preventDefault();
 		const prompt = promptInput.value.trim();
 		if (!prompt) return;
-		requestController = new AbortController();
-		setLoading(true);
+		sendPrompt.disabled = true;
+		promptInput.disabled = true;
 		try {
 			const response = await fetch("/api/generate", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ prompt, user_id: userId() }),
-				signal: requestController.signal,
 			});
 			const result = await parseJsonResponse(response);
 			if (!response.ok) throw new Error(result.error || "Generation failed.");
@@ -235,18 +207,11 @@ const parseJsonResponse = async (response) => {
 			// Durable link: reload it, close the tab, open it on another device later.
 			window.location.assign(`/responses?${params.toString()}`);
 		} catch (error) {
-			if (error.name !== "AbortError") {
-				showToast(error.message, "negative");
-			} else {
-				showToast("Generation cancelled.");
-			}
-			setLoading(false);
-		} finally {
-			requestController = null;
+			showToast(error.message, "negative");
+			promptInput.disabled = false;
+			updateSendState();
 		}
 	});
-
-	abortButton.addEventListener("click", () => requestController?.abort());
 })();
 
 document.querySelectorAll("[data-chip]").forEach((chip) => {

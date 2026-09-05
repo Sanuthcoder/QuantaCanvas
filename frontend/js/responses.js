@@ -6,6 +6,7 @@
   const iframeContainer = document.getElementById("iframe-container");
   const generationOverlay = document.getElementById("responseGenerationOverlay");
   const loadingMessage = document.getElementById("responseLoadingMessage");
+  const abortButton = document.getElementById("abortGeneration");
   const chats = document.getElementById("chats");
   const chatForm = document.getElementById("chatForm");
   const chatInput = document.getElementById("chatInput");
@@ -122,6 +123,26 @@
     if (messageTimer) window.clearInterval(messageTimer);
     messageTimer = null;
   };
+
+  const abortGeneration = async () => {
+    stopWaitingAnimation();
+    hasVisualization = false;
+    isLeavingPage = true;
+    abortButton.disabled = true;
+    generationOverlay.hidden = true;
+    try {
+      await fetch("/api/generation/discard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: gid, user_id: userId() }),
+        keepalive: true,
+      });
+    } finally {
+      window.location.assign("/tool.html");
+    }
+  };
+
+  abortButton.addEventListener("click", abortGeneration);
 
   const showError = (message) => {
     stopWaitingAnimation();
