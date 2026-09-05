@@ -4,6 +4,8 @@
   const prompt = params.get("prompt") || "";
   let summary = params.get("summary") || "";
   const iframeContainer = document.getElementById("iframe-container");
+  const generationOverlay = document.getElementById("responseGenerationOverlay");
+  const loadingMessage = document.getElementById("responseLoadingMessage");
   const chats = document.getElementById("chats");
   const chatForm = document.getElementById("chatForm");
   const chatInput = document.getElementById("chatInput");
@@ -110,27 +112,11 @@
   const POLL_MS = 3000;
   const GIVE_UP_MS = 30 * 60 * 1000;
   const startedAt = Date.now();
-  const waitingMessages = [
-    "Sketching the animation…",
-    "Working out the details…",
-    "Labelling the diagram…",
-    "Polishing the final frame…",
-  ];
-
-  const status = document.createElement("div");
-  status.className = "qc-generation-status";
-  status.innerHTML = `
-    <div class="qc-spinner" aria-hidden="true"></div>
-    <p class="qc-status-title">Building your visualization…</p>
-    <p class="qc-status-note">This usually takes a couple of minutes.</p>
-  `;
-  iframeContainer.replaceChildren(status);
-  const statusTitle = status.querySelector(".qc-status-title");
-  let messageIndex = 0;
+  let dots = 0;
   let messageTimer = window.setInterval(() => {
-    messageIndex = (messageIndex + 1) % waitingMessages.length;
-    statusTitle.textContent = waitingMessages[messageIndex];
-  }, 6000);
+    dots = (dots + 1) % 4;
+    loadingMessage.textContent = `Generating visualization${".".repeat(dots)}`;
+  }, 500);
 
   const stopWaitingAnimation = () => {
     if (messageTimer) window.clearInterval(messageTimer);
@@ -139,17 +125,21 @@
 
   const showError = (message) => {
     stopWaitingAnimation();
+    generationOverlay.hidden = true;
     hasVisualization = false;
-    status.innerHTML = `
-      <p class="qc-status-title">That didn't work</p>
-      <p class="qc-status-note"></p>
-      <a class="btn" href="/tool.html">Try another prompt</a>
+    iframeContainer.innerHTML = `
+      <div class="qc-generation-status">
+        <p class="qc-status-title">That didn't work</p>
+        <p class="qc-status-note"></p>
+        <a class="btn" href="/tool.html">Try another prompt</a>
+      </div>
     `;
-    status.querySelector(".qc-status-note").textContent = message;
+    iframeContainer.querySelector(".qc-status-note").textContent = message;
   };
 
   const renderVisualization = (job) => {
     stopWaitingAnimation();
+    generationOverlay.hidden = true;
     summary = job.summary || summary;
     const iframe = document.createElement("iframe");
     iframe.srcdoc = job.html;
