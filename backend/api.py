@@ -28,7 +28,7 @@ except ImportError:
 load_dotenv()
 
 API_KEYS = [key.strip() for key in os.environ.get("GEMINI_API_KEYS", "").split(",") if key.strip()]
-VISUALIZATION_MODEL = os.environ.get("GEMINI_VISUALIZATION_MODEL", "gemini-3.6-flash")
+VISUALIZATION_MODEL = os.environ.get("GEMINI_VISUALIZATION_MODEL", "gemini-3.8-flash")
 CHAT_MODEL = os.environ.get("GEMINI_CHAT_MODEL", "gemma-4-26b-a4b-it")
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip()

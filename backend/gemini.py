@@ -25,7 +25,7 @@ MODELS = [
     m.strip()
     for m in os.environ.get(
         "GEMINI_VISUALIZATION_MODELS",
-        "gemini-3.6-flash,gemini-3.5-flash",
+        "gemini-3.8-flash",
     ).split(",")
     if m.strip()
 ]
