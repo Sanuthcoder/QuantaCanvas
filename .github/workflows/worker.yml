@@ -41,7 +41,7 @@ jobs:
         if: always()
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          SITE_URL: ${{ vars.SITE_URL }}
+          SITE_URL: ${{ secrets.SITE_URL }}
         run: |
           curl -sf -H "Authorization: Bearer $CRON_SECRET" \
             "$SITE_URL/api/cron/discard_stale" || true
