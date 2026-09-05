@@ -1,21 +1,4 @@
-"""Gemini calls with API-key rotation and model fallback.
-
-Why this module exists
-----------------------
-`429 RESOURCE_EXHAUSTED` on the very first call for *every* key (the symptom in the
-GitHub Actions log) is almost never "you used too much":
-
-1. The model may have **no free-tier allowance at all**. Then your free quota for it
-   is zero and the first request already returns RESOURCE_EXHAUSTED. Rotating keys
-   cannot help - only switching model can, which is what MODELS below does.
-2. Keys created inside **one** Google Cloud / AI Studio project share one quota, so
-   17 keys from the same project behave exactly like a single key. Separate projects
-   (ideally separate Google accounts) are what actually multiply the quota.
-
-So the loop is: for each model in MODELS -> try every key; if all keys report
-exhausted, move to the next model. A 404 (unknown/unavailable model name) skips the
-model immediately, and Google's own `retryDelay` hint is honoured once per key.
-
+"""
 Environment
 -----------
 GEMINI_API_KEYS               comma-separated keys (required)
@@ -42,12 +25,13 @@ MODELS = [
     m.strip()
     for m in os.environ.get(
         "GEMINI_VISUALIZATION_MODELS",
-        "gemini-3.6-flash,gemini-flash-latest,gemini-2.5-flash",
+        "gemini-3.6-flash,gemini-3.5-flash",
     ).split(",")
     if m.strip()
 ]
 
 STREAM = os.environ.get("GEMINI_STREAM", "1") != "0"
+VERBOSE_STREAM = os.environ.get("GEMINI_VERBOSE_STREAM", "0") == "1"
 THINKING_LEVEL = os.environ.get("GEMINI_THINKING_LEVEL", "medium")
 MAX_RETRY_DELAY = float(os.environ.get("GEMINI_MAX_RETRY_DELAY", "20"))
 
@@ -61,6 +45,7 @@ SAFETY_SETTINGS = [
 CONFIG = types.GenerateContentConfig(
     safety_settings=SAFETY_SETTINGS,
     thinking_config=types.ThinkingConfig(thinking_level=THINKING_LEVEL),
+    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
 )
 
 
@@ -130,6 +115,11 @@ def _call(model: str, api_key: str, contents: str, stream: bool) -> str:
     ):
         if chunk.text:
             parts.append(chunk.text)
+            if VERBOSE_STREAM:
+                print(chunk.text, end="", flush=True)
+            else:
+                print(".", end="", flush=True)
+    print(flush=True)
     return "".join(parts)
 
 

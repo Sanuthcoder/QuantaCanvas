@@ -254,7 +254,7 @@ def _is_safety_error(error):
     return any(term in message for term in ("SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "HATE_SPEECH"))
 
 
-def _call_model(contents, model, stream_output=False):
+def _call_model(contents, model, stream_output=True):
     _require_keys()
     last_error = None
     print(
@@ -266,7 +266,7 @@ def _call_model(contents, model, stream_output=False):
         try:
             client = genai.Client(api_key=api_key)
             if not stream_output:
-                return client.models.generate_content(
+                return client.models.generate_content_stream(
                     model=model, contents=contents, config=GENERATION_CONFIG
                 ).text or ""
 
