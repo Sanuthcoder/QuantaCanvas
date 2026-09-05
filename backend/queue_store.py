@@ -100,6 +100,41 @@ def job_status(job_id: str, include_html: bool = True) -> dict | None:
     rows = result.data or []
     return rows[0] if rows else None
 
+def discard_job(job_id: str, user_id: str | None = None) -> bool:
+    """Clear the stored HTML/summary so it's no longer retrievable. Row
+    and status stay as-is (status remains 'completed') — the polling
+    route already treats a completed row with no result_html as expired
+    and returns a clean message, so nothing else needs to change for
+    that to work correctly here."""
+    query = (
+        _client()
+        .table("generation_jobs")
+        .update({"result_html": None, "result_summary": None})
+        .eq("id", job_id)
+    )
+    if user_id:
+        query = query.eq("user_id", user_id)
+    result = query.execute()
+    return bool(result.data)
+
+def discard_stale_jobs(older_than_minutes: int = 60) -> int:
+    """Backstop for when the tab-close beacon never fires (crash, force
+    quit, killed process — there's no reliable way to catch those). Any
+    completed job past this age gets its content cleared regardless."""
+    from datetime import datetime, timedelta, timezone
+ 
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=older_than_minutes)).isoformat()
+    result = (
+        _client()
+        .table("generation_jobs")
+        .update({"result_html": None, "result_summary": None})
+        .eq("status", "completed")
+        .lt("created_at", cutoff)
+        .execute()
+    )
+    return len(result.data) if result.data else 0
+    
+    
 
 def queue_depth() -> int:
     result = (

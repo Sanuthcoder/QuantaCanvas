@@ -34,7 +34,7 @@ except ImportError:
 
 try:
     from .api import _start_usage_event
-    from .queue_store import enqueue_job, job_status
+    from .queue_store import enqueue_job, job_status, discard_job, discard_stale_jobs
     from .dispatch import trigger_worker
 except ImportError:
     from api import _start_usage_event
@@ -109,6 +109,19 @@ def cleanup_ips():
     print(f"[cron] cleared ip_address on {purged} generation(s)", flush=True)
     return jsonify(purged=purged)
 
+@app.get("/api/cron/discard_stale")
+def cron_discard_stale():
+    # Backstop for the tab-close beacon: if it never fires (crash, force
+    # quit, killed tab process — genuinely undetectable cases), this
+    # guarantees the result still gets cleared, just later.
+    cron_secret = os.environ.get("CRON_SECRET", "")
+    auth_header = request.headers.get("Authorization", "")
+    if not cron_secret or auth_header != f"Bearer {cron_secret}":
+        return jsonify(error="Unauthorized"), 401
+ 
+    discarded = discard_stale_jobs(older_than_minutes=60)
+    print(f"[cron] discarded {discarded} stale visualization(s)", flush=True)
+    return jsonify(discarded=discarded)
 
 @app.post("/api/generate")
 def generate():
@@ -192,6 +205,35 @@ def generation_state(job_id):
 
     return jsonify(body)
 
+@app.post("/api/generation/discard")
+def discard_generation():
+    # Called via navigator.sendBeacon() when the tab is closing/navigating
+    # away — sendBeacon doesn't reliably send an application/json content
+    # type, so parse leniently rather than requiring it.
+    payload = request.get_json(silent=True)
+    if payload is None:
+        try:
+            payload = json.loads(request.get_data(as_text=True) or "{}")
+        except (ValueError, TypeError):
+            payload = {}
+ 
+    job_id = str(payload.get("job_id", "")).strip()
+    user_id = str(payload.get("user_id", "")).strip() or None
+ 
+    try:
+        job_id = str(uuid.UUID(job_id))
+    except (ValueError, AttributeError, TypeError):
+        return jsonify(error="A valid job id is required."), 400
+ 
+    try:
+        discard_job(job_id, user_id)
+    except Exception:
+        app.logger.exception("Discard failed")
+        # sendBeacon has no way to see this response anyway — the cron
+        # backstop will clear it later regardless.
+        return jsonify(error="Could not discard right now."), 502
+ 
+    return jsonify(discarded=True)
 
 @app.post("/api/chat")
 def chat():

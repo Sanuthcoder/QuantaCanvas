@@ -29,6 +29,15 @@
     event.returnValue = "Your visualization will remain available if you reload, but leaving may end this session.";
   });
 
+  window.addEventListener("pagehide", () => {
+    if (!gid || !navigator.sendBeacon) return;
+    const body = new Blob(
+      [JSON.stringify({ job_id: gid, user_id: userId() })],
+      { type: "application/json" }
+    );
+    navigator.sendBeacon("/api/generation/discard", body);
+  });
+
   const leavePage = async (destination = "../frontend/tool.html") => {
     if (isLeavingPage) return;
     isLeavingPage = true;

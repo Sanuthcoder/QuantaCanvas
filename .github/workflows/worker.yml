@@ -36,3 +36,12 @@ jobs:
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
           GEMINI_VISUALIZATION_MODELS: ${{ secrets.GEMINI_VISUALIZATION_MODELS }}
         run: python worker.py --drain
+
+      - name: Clear stale visualization results
+        if: always()
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          curl -sf -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE_URL/api/cron/discard_stale" || true
