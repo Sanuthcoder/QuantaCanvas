@@ -111,7 +111,6 @@
   const GIVE_UP_MS = 30 * 60 * 1000;
   const startedAt = Date.now();
   const waitingMessages = [
-    "Reading your question…",
     "Sketching the animation…",
     "Working out the details…",
     "Labelling the diagram…",
@@ -123,7 +122,7 @@
   status.innerHTML = `
     <div class="qc-spinner" aria-hidden="true"></div>
     <p class="qc-status-title">Building your visualization…</p>
-    <p class="qc-status-note">This usually takes a couple of minutes. You can leave this page open, reload it, or come back to this link later — the result is saved.</p>
+    <p class="qc-status-note">This usually takes a couple of minutes.</p>
   `;
   iframeContainer.replaceChildren(status);
   const statusTitle = status.querySelector(".qc-status-title");
