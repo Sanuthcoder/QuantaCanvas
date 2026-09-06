@@ -34,14 +34,14 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
-          GEMINI_VISUALIZATION_MODELS: ${{ secrets.GEMINI_VISUALIZATION_MODELS }}
+          GEMINI_VISUALIZATION_MODELS: ${{ vars.GEMINI_VISUALIZATION_MODELS }}
         run: python worker.py --drain
 
       - name: Clear stale visualization results
         if: always()
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          SITE_URL: ${{ secrets.SITE_URL }}
+          SITE_URL: ${{ vars.SITE_URL }}
         run: |
           curl -sf -H "Authorization: Bearer $CRON_SECRET" \
             "$SITE_URL/api/cron/discard_stale" || true
