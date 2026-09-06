@@ -15,6 +15,39 @@
   let isGeneratingReply = false;
   let isLeavingPage = false;
   let hasVisualization = true;
+  let visualizationReady = false;
+
+  const visualizationStorageKey = `quantacanvas:visualization:${jobId}`;
+
+  const readStoredVisualization = () => {
+    try {
+      const stored = sessionStorage.getItem(visualizationStorageKey);
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const storeVisualization = (job) => {
+    try {
+      sessionStorage.setItem(
+        visualizationStorageKey,
+        JSON.stringify({ html: job.html, summary: job.summary || "" })
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const discardRemoteCopy = () => {
+    if (!gid || !navigator.sendBeacon) return;
+    const body = new Blob(
+      [JSON.stringify({ job_id: gid, user_id: userId() })],
+      { type: "application/json" }
+    );
+    navigator.sendBeacon("/api/generation/discard", body);
+  };
 
   const userId = () => {
     let id = localStorage.getItem("quantacanvas_user_id");
@@ -33,12 +66,7 @@
   });
 
   window.addEventListener("pagehide", () => {
-    if (!gid || !navigator.sendBeacon) return;
-    const body = new Blob(
-      [JSON.stringify({ job_id: gid, user_id: userId() })],
-      { type: "application/json" }
-    );
-    navigator.sendBeacon("/api/generation/discard", body);
+    if (!visualizationReady) discardRemoteCopy();
   });
 
   const leavePage = async (destination = "../frontend/tool.html") => {
@@ -161,6 +189,7 @@
   const renderVisualization = (job) => {
     stopWaitingAnimation();
     generationOverlay.hidden = true;
+    visualizationReady = true;
     summary = job.summary || summary;
     const iframe = document.createElement("iframe");
     iframe.srcdoc = job.html;
@@ -168,6 +197,7 @@
     iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
     iframe.addEventListener("load", confirmGeneration, { once: true });
     iframeContainer.replaceChildren(iframe);
+    if (storeVisualization(job)) discardRemoteCopy();
   };
 
   const poll = async () => {
@@ -200,7 +230,12 @@
     }
   };
 
-  poll();
+  const storedVisualization = readStoredVisualization();
+  if (storedVisualization?.html) {
+    renderVisualization(storedVisualization);
+  } else {
+    poll();
+  }
 
   const addMessage = (role, text) => {
     const bubble = document.createElement("div");
