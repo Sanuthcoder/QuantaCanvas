@@ -180,8 +180,11 @@ def generation_state(job_id):
     try:
         row = job_status(job_id)
     except Exception:
-        app.logger.exception("Job status lookup failed")
-        return jsonify(error="Unable to check the status right now."), 502
+        app.logger.exception("Job status lookup failed for job %s", job_id)
+        return jsonify(
+            error="Unable to check the status right now.",
+            retryable=True,
+        ), 502
 
     if not row:
         return jsonify(error="That generation could not be found."), 404
