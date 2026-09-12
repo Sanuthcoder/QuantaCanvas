@@ -140,7 +140,9 @@
   // This link is durable: reloading, closing the tab, or opening it later works.
   const POLL_MS = 3000;
   const GIVE_UP_MS = 30 * 60 * 1000;
+  const STATUS_RETRY_LIMIT = 5;
   const startedAt = Date.now();
+  let statusFailures = 0;
   let dots = 0;
   let messageTimer = window.setInterval(() => {
     dots = (dots + 1) % 4;
@@ -208,9 +210,15 @@
       const job = await response.json();
 
       if (!response.ok) {
+        if (response.status >= 500 && statusFailures < STATUS_RETRY_LIMIT) {
+          statusFailures += 1;
+          window.setTimeout(poll, POLL_MS * 2);
+          return;
+        }
         showError(job.error || "We couldn't find that visualization.");
         return;
       }
+      statusFailures = 0;
       if (job.status === "completed") {
         renderVisualization(job);
         return;
