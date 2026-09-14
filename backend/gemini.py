@@ -80,6 +80,23 @@ def _is_quota_error(error) -> bool:
     return _status_code(error) == 429 or "RESOURCE_EXHAUSTED" in str(error).upper()
 
 
+def _friendly_model_error(error) -> str:
+    """Explain provider failures without exposing API or model internals."""
+    if _is_quota_error(error):
+        return "The AI service is temporarily out of capacity. Please try again in a moment."
+
+    status = _status_code(error)
+    if status in (500, 503):
+        return "The AI service is temporarily unavailable. Please try again in a moment."
+    if status in (401, 403):
+        return "The AI service could not authorize this request. Please try again later."
+    if status == 400:
+        return "The prompt could not be processed. Please try rewording it and try again."
+    if status == 404:
+        return "The requested AI model is unavailable. Please try again later."
+    return "The AI service could not complete this request. Please try again in a moment."
+
+
 def _is_missing_model(error) -> bool:
     text = str(error).upper()
     return _status_code(error) == 404 or "NOT_FOUND" in text or "IS NOT SUPPORTED" in text
@@ -185,7 +202,4 @@ def generate_text(contents: str, models: list[str] | None = None, stream: bool |
                 flush=True,
             )
 
-    raise ModelExhausted(
-        "Every Gemini model in the fallback chain refused the request "
-        f"({chain}). Last error: {last_error}"
-    ) from last_error
+    raise ModelExhausted(_friendly_model_error(last_error)) from last_error

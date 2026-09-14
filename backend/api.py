@@ -245,8 +245,25 @@ def _finish_generation(generation_id, status, started):
         print(f"[Supabase] generation completion failed: {error}", flush=True)
 
 
-def _user_friendly_model_error():
-    return RuntimeError("The model is currently exhausted. Please try again in a moment.")
+def _user_friendly_model_error(error=None):
+    """Explain provider failures without exposing API or model internals."""
+    message = str(error or "").upper()
+    status_match = re.search(r"\b(400|401|403|404|429|500|503)\b", message)
+    status = int(status_match.group(1)) if status_match else None
+
+    if status == 429 or "RESOURCE_EXHAUSTED" in message:
+        detail = "The AI service is temporarily out of capacity. Please try again in a moment."
+    elif status in (500, 503):
+        detail = "The AI service is temporarily unavailable. Please try again in a moment."
+    elif status in (401, 403):
+        detail = "The AI service could not authorize this request. Please try again later."
+    elif status == 400:
+        detail = "The prompt could not be processed. Please try rewording it and try again."
+    elif status == 404:
+        detail = "The requested AI model is unavailable. Please try again later."
+    else:
+        detail = "The AI service could not complete this request. Please try again in a moment."
+    return RuntimeError(detail)
 
 
 def _is_safety_error(error):
@@ -289,7 +306,7 @@ def _call_model(contents, model, stream_output=True):
                 f"{type(error).__name__}: {error}",
                 flush=True,
             )
-    raise _user_friendly_model_error() from last_error
+    raise _user_friendly_model_error(last_error) from last_error
 
 
 def _clean_document(content):
@@ -395,7 +412,7 @@ def stream_follow_up(question, summary, history, user_id, ip_address):
                     f"{type(error).__name__}: {error}",
                     flush=True,
                 )
-        raise _user_friendly_model_error() from last_error
+        raise _user_friendly_model_error(last_error) from last_error
     finally:
         _finish_generation(generation_id, "completed" if completed else "failed", started)
 
