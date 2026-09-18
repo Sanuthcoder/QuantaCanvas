@@ -1647,7 +1647,9 @@ SUMMARY RULES:
 - Do NOT repeat the original user prompt unless necessary for context.
 - Be concise and information-dense.
 - Do not add anything before <<<LESSON_SUMMARY>>> or after <<<END_LESSON_SUMMARY>>>.
-- End the whole response with the <<<END_LESSON_SUMMARY>>."""
+- End the whole response with the <<<END_LESSON_SUMMARY>>.
+
+Keep the whole response to a maximum of 65,536 output tokens."""
 
 
 
