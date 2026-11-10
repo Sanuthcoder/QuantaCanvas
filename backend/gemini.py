@@ -81,7 +81,7 @@ def _is_quota_error(error) -> bool:
 
 
 def _friendly_model_error(error) -> str:
-    """Explain provider failures without exposing API or model internals."""
+    
     if _is_quota_error(error):
         return "The AI service is temporarily out of capacity. Please try again in a moment."
 
